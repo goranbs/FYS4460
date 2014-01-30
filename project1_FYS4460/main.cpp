@@ -85,9 +85,9 @@ int main(int argc, char* argv[]){
     // velocity should contain the velocity of every particle in the grid:
     vector < vector < double > > velocity (N_atoms*4, vector < double > (3,0) );
 
-    double rx_ij,ry_ij,rz_ij, rx,ry,rz, r2,r2i,r6i,r12i;
+    double rx_ij,ry_ij,rz_ij, rx,ry,rz, r2,r2i,r6i,r12i,fix,fiy,fiz,fjx,fjy,fjz;
+    // f_ij contains the force felt from each particle i on particle j.
     vector < vector < double > > f_ij (N_atoms*N_atoms*16, vector < double > (3,0));
-    vector < vector < double > > r_ij ();
     int force = 0;
     for (int i = 0; i < N_atoms*4; ++i) {
         rx = atom[i][0]; ry = atom[i][1]; rz = atom[i][2];
@@ -107,8 +107,12 @@ int main(int argc, char* argv[]){
             f_ij[force][1] = 24*(2*r12i - r6i)*r2i*ry_ij;
             f_ij[force][2] = 24*(2*r12i - r6i)*r2i*rz_ij;
 
-            fi = fi + f_ij;
-            fj = fj - f_ij;
+            fix = fix + f_ij[force][0];
+            fiy = fiy + f_ij[force][1];
+            fiz = fiz + f_ij[force][2];
+            fjx = fjx - f_ij[force][0];
+            fjy = fjy - f_ij[force][1];
+            fjz = fjz - f_ij[force][2];
 
             force = force + 1;
         }
