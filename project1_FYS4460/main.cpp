@@ -9,6 +9,13 @@ using namespace std;
 
 double pi = 4*atan(1);
 
+double b = 5.26;    // Ångstrøm [Å]
+double kB = 1.480*pow(10,-23);    // Bolzmann constant
+double eps = 0.1*1.0303;          // Energy constant [eV]
+double Temp = 100.0;              // Kelvin, initial temperature
+double T = (kB/eps)*Temp;            // unitless temperature
+//sigma = sqrt(kB*T/m);   // standarddeviation in temp. from Boltzmann distribution
+
 double random_number(){
     /****************************************************************************
      *  Random number generator - Bolzmann distribution
@@ -20,21 +27,19 @@ double random_number(){
     return val;
 }
 
-void initialize(double **R, double *V,int N){
+void initialize(vector < vector < double > > &V, vector < vector < double > > &R, int &N){
 
-    /* Initialize system:
+    /*   Initialize system:
      * - initial particle positions   - fcc
      * - initial particle velocities  - Boltzmann distibution
      */
 
-    double x,y,z,b,N,Nx,Ny,Nz,Lx,Ly,Lz,sigma,T,kB;
+    double x,y,z,Nx,Ny,Nz,Lx,Ly,Lz;
     int natom,N_atoms;
 
     Nx = 3;    // number of origins (from where to place the four atoms) within a box
     Ny = 3;
     Nz = 3;
-
-    b = 1.0;     // 5.26;    // Ångstrøm [Å]
 
     Lx = Nx*b;   // length of box along x-axis
     Ly = Ny*b;
@@ -42,14 +47,6 @@ void initialize(double **R, double *V,int N){
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
-
-    kB = 1.480*pow(10,-23); // Bolzmann constant
-    T = 100.0;              // Kelvin, initial temperature
-    //sigma = sqrt(kB*T/m);   // standarddeviation in temp. from Boltzmann distribution
-
-    // create a vector within a vector, using including the <vector> library.
-//    vector < vector < double > > R; // positions
-//    vector < vector < double > > V; // velocities
 
     /*****************************************************************************
      *               Initial positions and velocities
@@ -90,7 +87,6 @@ void initialize(double **R, double *V,int N){
         }
     }
 
-
     /*********************************************************************************************
      *                     Write initial conditions to file
      * string filename = "state000.xyz", open file and write initial postions and velocities;
@@ -123,67 +119,99 @@ void initialize(double **R, double *V,int N){
 
 }
 
-void integrator(double **R,double **V,int N){
 
-    /* *********************************************************************************************
-     * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
-     *  using the Lenny-Jones potential to find the force between evry particle.
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N){
+    /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
-    double rx,ry,rz,r2,r2i,r6i,r12i,fix,fiy,fiz,fjx,fjy,fjz;
-
-    // f_ij contains the force felt from each particle i on particle j.
-    vector < vector < double > > f_ij (N,3);
+    double rx,ry,rz,r2,r2i,r6i,r12i;
 
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
-        vector < double > f (3);
+        vector < double > f (3);   //  sums up to total force on i
         for (int j = 0; j < N; ++j) {
             if ( j != i) {
                 vector < double > r_ij (3);
                 vector < double > fij (3);
 
-                r_ij[0] = rx - R[j][0];
+                r_ij[0] = rx - R[j][0];  // distance between particle i and j.
                 r_ij[1] = ry - R[j][1];
                 r_ij[2] = rz - R[j][2];
 
-                r2 = r_ij[0]*rx_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
                 r2i = 1.0/r2;
                 r6i = r2i*r2i*r2i;
-                r12i = r6*r6;
+                r12i = r6i*r6i;
 
-                //f_ij = 24*(2*r12i - r6i)*r2i*rx*r_ij;
-                f_ij[force][0] = 24*(2*r12i - r6i)*r2i*rx_ij;
-                f_ij[force][1] = 24*(2*r12i - r6i)*r2i*ry_ij;
-                f_ij[force][2] = 24*(2*r12i - r6i)*r2i*rz_ij;
+                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];     // force from j on i.
+                fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+                fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
 
-                fij[0] = fix + f_ij[force][0];
-                fij[1] = fiy + f_ij[force][1];
-                fij[2] = fiz + f_ij[force][2];
-                //fjx = fjx - f_ij[force][0];
-                //fjy = fjy - f_ij[force][1];
-                //fjz = fjz - f_ij[force][2];
+                f[0] = f[0] + fij[0];
+                f[1] = f[1] + fij[1];
+                f[2] = f[2] + fij[2];
 
-                f = f + f.push_back(fij);
 
                 force = force + 1;
             } // end if
         } // end for j
 
-        f_ij.push_back(f);
+        F[i] = f;  // total force on particle i
     } // end for i
 
+
+    cout << "------Forces on particle i------------" << endl;
     for (int i = 0; i < N; ++i) {
-        vector < double > v (3);
-        vector < double > r (3);
-
-        v1[0] = V[i][0] + f_ij(i)/2m*dt // dimentions!
-
-
+        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
     }
 
 }
+
+
+void integrator(vector < vector < double > > &R,vector < vector < double > > &V,int N){
+
+    /* *********************************************************************************************
+     * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
+     *  using the Lenny-Jones potential to find the force between evry particle.
+     *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
+     */
+
+    vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
+
+    Lennard_Jones(F,R,N);
+
+    double dt = 0.11;
+    double m = 39.948; // amu
+    char* filename;
+   // while (t<tmax) {
+
+    filename = new char[20];
+    filename = "state001.xyz";
+    ofstream myfile;
+    myfile.open(filename);
+    myfile << N ;
+    int time = 1;
+
+    Lennard_Jones(F,R,N); // calculate the force at time (t)
+    myfile << "state%03g" << time << endl;
+
+    for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
+        V[i] = V[i] + F[i]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
+        R[i] = R[i] + V[i]*dt;         // Calculate R[i] at (t + dt)
+    }
+    Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
+    for (int i = 0; i < N; ++i) {
+        V[i] = V[i] + F[i]*dt/(2*m);   // then find the velocities at time (t+dt)
+
+        // Write to file:
+        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
+    }
+    myfile.close();
+}
+
+
+
 
 int main(){
 
@@ -192,9 +220,9 @@ int main(){
     vector < vector < double > > V; // velocities
     int N;
 
-    initialize(R,V,N);
+    initialize(V,R,N);
 
-    integrator(R,V,R);
+    integrator(V,R,N);
 
     return 0;
 }
