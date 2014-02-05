@@ -16,6 +16,7 @@ double Temp = 100.0;              // Kelvin, initial temperature
 double T = (kB/eps)*Temp;            // unitless temperature
 //sigma = sqrt(kB*T/m);   // standarddeviation in temp. from Boltzmann distribution
 
+
 double random_number(){
     /****************************************************************************
      *  Random number generator - Bolzmann distribution
@@ -66,17 +67,17 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x+0.5; r[1] = y+0.5; r[2] = z;
+                r[0] = x+0.5*b; r[1] = y+0.5*b; r[2] = z;
                 R.push_back(r); // [x+0.5,y+0.5,z]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x+0.5; r[1] = y; r[2] = z+0.5;
+                r[0] = x+0.5*b; r[1] = y; r[2] = z+0.5*b;
                 R.push_back(r); // [x+0.5,y,z+0.5]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x; r[1] = y+0.5; r[2] = z+0.5;
+                r[0] = x; r[1] = y+0.5*b; r[2] = z+0.5*b;
                 R.push_back(r); // [x,y+0.5,z+0.5]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
@@ -98,7 +99,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     double std_dev;
 
     for (int i=0;i<N;++i){
-        cout << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
+        //cout << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
         sum_v = sum_v + (V[i][0] + V[i][1] + V[i][2]);
         quad_sum_v = quad_sum_v + (V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]);
     }
@@ -113,7 +114,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     myfile << N << endl;
     myfile << "initial state fcc lattice of Argon gass" << endl;
     for (int i=0;i<N;++i){
-        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
+        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << endl;
     }
     myfile.close();
 
@@ -135,11 +136,13 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 vector < double > r_ij (3);
                 vector < double > fij (3);
 
-                r_ij[0] = rx - R[j][0];  // distance between particle i and j.
-                r_ij[1] = ry - R[j][1];
-                r_ij[2] = rz - R[j][2];
+                r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
+                r_ij[1] = ry - R[j][1];  // y
+                r_ij[2] = rz - R[j][2];  // z
+
 
                 r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                cout << r2 << endl;
                 r2i = 1.0/r2;
                 r6i = r2i*r2i*r2i;
                 r12i = r6i*r6i;
@@ -157,7 +160,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
             } // end if
         } // end for j
 
-        F[i] = f;  // total force on particle i
+        F[i] = f;  // total force in [x,y,z] on particle i
     } // end for i
 
 
@@ -165,11 +168,10 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
     for (int i = 0; i < N; ++i) {
         cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
     }
-
 }
 
 
-void integrator(vector < vector < double > > &R,vector < vector < double > > &V,int N){
+void integrator(vector < vector < double > > &R,vector < vector < double > > &V,int &N){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -179,35 +181,40 @@ void integrator(vector < vector < double > > &R,vector < vector < double > > &V,
 
     vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
 
-    Lennard_Jones(F,R,N);
 
-    double dt = 0.11;
+    double dt = 0.01;
+    double tmax = 10;
     double m = 39.948; // amu
-    char* filename;
-   // while (t<tmax) {
+    vector < double > Time ;
 
-    filename = new char[20];
-    filename = "state001.xyz";
-    ofstream myfile;
-    myfile.open(filename);
-    myfile << N ;
-    int time = 1;
+    for (int t=1;t<tmax;++t){
+        char filename [20];
+        sprintf(filename, "state%03d.xyz", t);
+        ofstream myfile;
+        myfile.open(filename);
+        myfile << N << endl;
+        myfile << filename << " time:" << t*dt << endl;
 
-    Lennard_Jones(F,R,N); // calculate the force at time (t)
-    myfile << "state%03g" << time << endl;
+        for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
+            V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
+            V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
+            V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
+            R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
+            R[i][1] = R[i][1] + V[i][1]*dt;
+            R[i][2] = R[i][2] + V[i][2]*dt;
+        }
+        Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
+        for (int i = 0; i < N; ++i) {
+            V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
+            V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
+            V[i][1] = V[i][2] + F[i][2]*dt/(2*m);
+            // Write to file:
 
-    for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
-        V[i] = V[i] + F[i]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
-        R[i] = R[i] + V[i]*dt;         // Calculate R[i] at (t + dt)
+            myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << endl;
+        }
+        myfile.close();
+        Time.push_back(t*dt);
     }
-    Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
-    for (int i = 0; i < N; ++i) {
-        V[i] = V[i] + F[i]*dt/(2*m);   // then find the velocities at time (t+dt)
-
-        // Write to file:
-        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
-    }
-    myfile.close();
 }
 
 
