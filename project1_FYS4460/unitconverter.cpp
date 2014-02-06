@@ -1,7 +1,6 @@
 #include "unitconverter.h"
 
-UnitConverter::UnitConverter(){
-
+UnitConverter::UnitConverter() {
 }
 
 double UnitConverter::to_amu(double mass){
@@ -27,4 +26,10 @@ double UnitConverter::to_energy(double energy){
 }
 double UnitConverter::from_energy(double energy){
     return energy/m_energy;
+}
+double UnitConverter::to_aangstrom(double aangstrom){
+    return aangstrom*m_aangstrom;
+}
+double UnitConverter::from_aangstrom(double aangstrom){
+    return aangstrom/m_aangstrom;
 }

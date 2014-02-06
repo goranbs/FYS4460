@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <random>
+#include <unitconverter.h>
 
 using namespace std;
 
@@ -17,7 +18,6 @@ double eps = 0.1*1.0303;          // Energy constant [eV]
 double Temp = 100.0;              // Kelvin, initial temperature
 double T = (kB/eps)*Temp;            // unitless temperature
 //sigma = sqrt(kB*T/m);   // standarddeviation in temp. from Boltzmann distribution
-
 
 double random_number(){
     /****************************************************************************
