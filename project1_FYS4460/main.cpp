@@ -38,9 +38,9 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     double x,y,z,Nx,Ny,Nz,Lx,Ly,Lz;
     int natom,N_atoms;
 
-    Nx = 3;    // number of origins (from where to place the four atoms) within a box
-    Ny = 3;
-    Nz = 3;
+    Nx = 2;    // number of origins (from where to place the four atoms) within a box
+    Ny = 2;
+    Nz = 2;
 
     Lx = Nx*b;   // length of box along x-axis
     Ly = Ny*b;
@@ -142,16 +142,15 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
 
                 r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                cout << r2 << endl;
                 r2i = 1.0/r2;
                 r6i = r2i*r2i*r2i;
                 r12i = r6i*r6i;
 
-                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];     // force from j on i.
+                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
                 fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
                 fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
 
-                f[0] = f[0] + fij[0];
+                f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
                 f[1] = f[1] + fij[1];
                 f[2] = f[2] + fij[2];
 
@@ -164,14 +163,14 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
     } // end for i
 
 
-    cout << "------Forces on particle i------------" << endl;
-    for (int i = 0; i < N; ++i) {
-        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
-    }
+//    cout << "------Forces on particle i------------" << endl;
+//    for (int i = 0; i < N; ++i) {
+//        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
+//    }
 }
 
 
-void integrator(vector < vector < double > > &R,vector < vector < double > > &V,int &N){
+void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -183,8 +182,8 @@ void integrator(vector < vector < double > > &R,vector < vector < double > > &V,
 
 
     double dt = 0.01;
-    double tmax = 10;
-    double m = 39.948; // amu
+    int tmax = 100;
+    double m = 1.0; //39.948; // amu
     vector < double > Time ;
 
     for (int t=1;t<tmax;++t){
