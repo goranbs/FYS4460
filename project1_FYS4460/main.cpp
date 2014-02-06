@@ -12,12 +12,40 @@ using namespace std;
 
 double pi = 4*atan(1);
 
-double b = 5.26;    // Ångstrøm [Å]
-double kB = 1.480*pow(10,-23);    // Bolzmann constant
+double b = 5.260;                 // Ångstrøm [Å]
+double mA = 39.948;               // mass of Argon [amu]
+double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV]
 double eps = 0.1*1.0303;          // Energy constant [eV]
 double Temp = 100.0;              // Kelvin, initial temperature
-double T = (kB/eps)*Temp;            // unitless temperature
-//sigma = sqrt(kB*T/m);   // standarddeviation in temp. from Boltzmann distribution
+//double T = (kB/eps)*Temp;       // unitless temperature
+double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
+/********************************************************************************
+ * Conversion factors, so that we get out units that we would like to use
+ */
+
+UnitConverter leng;
+double length = leng.from_aangstrom(b);  // unitless length
+
+UnitConverter nrj;
+double E = nrj.from_energy(eps);                // unitless energy
+
+UnitConverter mass;
+double m = mass.from_amu(mA);            // unitless mass
+
+double Time_0 = sigma*sqrt(mA/eps);      // Conversion factor time
+UnitConverter time_0;
+double Time = time_0.from_time(Time_0);  // unitless time
+
+double F_0 = mA*sigma/(Time_0*Time_0);   // Conversion factor force
+
+double T_0 = eps/kB;                     // Conversion factor temperature
+
+double velocity = sigma/Time_0;          // Conversion factor velocity
+/********************************************************************************
+ */
+
+
+
 
 double random_number(){
     /****************************************************************************
@@ -44,9 +72,9 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     Ny = 2;
     Nz = 2;
 
-    Lx = Nx*b;   // length of box along x-axis
-    Ly = Ny*b;
-    Lz = Nz*b;
+    Lx = Nx*length;   // length of box along x-axis
+    Ly = Ny*length;
+    Lz = Nz*length;
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
@@ -62,24 +90,24 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
                 vector < double > r (3); // temp position vector
                 vector < double > v (3); // temp velocity vector
 
-                x = ix*b; y=iy*b;z=iz*b;
+                x = ix*length; y=iy*length;z=iz*length;
 
                 r[0] = x; r[1] = y; r[2] = z;
                 R.push_back(r); // [x,y,z]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x+0.5*b; r[1] = y+0.5*b; r[2] = z;
+                r[0] = x+0.5*length; r[1] = y+0.5*length; r[2] = z;
                 R.push_back(r); // [x+0.5,y+0.5,z]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x+0.5*b; r[1] = y; r[2] = z+0.5*b;
+                r[0] = x+0.5*length; r[1] = y; r[2] = z+0.5*length;
                 R.push_back(r); // [x+0.5,y,z+0.5]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
 
-                r[0] = x; r[1] = y+0.5*b; r[2] = z+0.5*b;
+                r[0] = x; r[1] = y+0.5*length; r[2] = z+0.5*length;
                 R.push_back(r); // [x,y+0.5,z+0.5]
                 v[0] = random_number();v[1] = random_number();v[2] = random_number();
                 V.push_back(v);
@@ -122,7 +150,6 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-
 void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
@@ -145,17 +172,26 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
                 r_ij[1] = ry - R[j][1];  // y
                 r_ij[2] = rz - R[j][2];  // z
+
                 // Periodic boundary conditions
                 if (r_ij[0] > Lx/2){
                     r_ij[0] = Lx - r_ij[0];
                 }
+                if (r_ij[0] < -Lx/2){
+                    r_ij[0] = Lx + r_ij[0];
+                }
                 if (r_ij[1] > Ly/2){
                     r_ij[1] = Ly - r_ij[1];
+                }
+                if (r_ij[1] < -Ly/2){
+                    r_ij[1] = Ly + r_ij[1];
                 }
                 if (r_ij[2] > Lz/2){
                     r_ij[2] = Lz - r_ij[12];
                 }
-
+                if (r_ij[2] < -Lz/2){
+                    r_ij[2] = Lz + r_ij[12];
+                }
 
                 r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
                 r2i = 1.0/r2;
@@ -198,14 +234,14 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     double Lx,Ly,Lz;
 
-    Lx = 2*b;
-    Ly = 2*b;
-    Lz = 2*b;
+    Lx = 2*length;
+    Ly = 2*length;
+    Lz = 2*length;
 
-    double dt = 0.01;
-    int tmax = 100;
-    double m = 1.0; //39.948; // amu
-    vector < double > Time ;
+    double dt = 0.02;
+    int tmax = 200;
+
+    vector < double > Time_vec ;
 
     for (int t=1;t<tmax;++t){
         char filename [20];
@@ -226,11 +262,20 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             if (R[i][0] > Lx){
                 R[i][0] = R[i][0] - Lx;
             }
+            if (R[i][0] < 0){
+                R[i][0] = R[i][0] + Lx;
+            }
             if (R[i][1] > Ly){
                 R[i][1] = R[i][1] - Ly;
             }
+            if (R[i][1] < 0){
+                R[i][1] = R[i][1] + Ly;
+            }
             if (R[i][2] > Lz){
                 R[i][2] = R[i][2] - Ly;
+            }
+            if (R[i][2] < 0){
+                R[i][2] = R[i][2] + Lz;
             }
         }
         Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
@@ -243,7 +288,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << endl;
         }
         myfile.close();
-        Time.push_back(t*dt);
+        Time_vec.push_back(t*dt);
     }
 }
 
@@ -251,6 +296,14 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
 
 int main(){
+
+
+    cout << "scaled mass:   " << m << endl;
+    cout << "scaled time:   " << 0.02 << endl;
+    cout << "scaled length: " << length << endl;
+    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
+    cout << "scaled Energy: " << eps/E << endl;
+    cout << "scaled Temp.:  " << Temp/T_0 << endl;
 
     // create a vector within a vector, using including the <vector> library.
     vector < vector < double > > R; // positions

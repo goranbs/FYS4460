@@ -18,12 +18,12 @@ public:
 
 
 private :
-    static const double m_mass = 39.948; // amu
-    static const double m_length = 3.405e-10; // m
-    static const double m_time = 2.1569e-12; // s
-    static const double m_energy = 1.0318*1.602e-20; // E
-    static const double m_temperature = 119.74; // K
-    static const double m_aangstrom = 3.405; // Å
+    static constexpr double m_mass = 39.948; // amu
+    static constexpr double m_length = 3.405e-10; // m
+    static constexpr double m_time = 2.1569e-12; // s
+    static constexpr double m_energy = 1.0318*1.602e-20; // E
+    static constexpr double m_temperature = 119.74; // K
+    static constexpr double m_aangstrom = 3.405; // Å
 
 };
 
