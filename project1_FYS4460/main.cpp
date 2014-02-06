@@ -126,7 +126,11 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
      */
 
     double rx,ry,rz,r2,r2i,r6i,r12i;
+    double Lx,Ly,Lz;
 
+    Lx = 2*b;
+    Ly = 2*b;
+    Lz = 2*b;
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
@@ -139,6 +143,16 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
                 r_ij[1] = ry - R[j][1];  // y
                 r_ij[2] = rz - R[j][2];  // z
+                // Periodic boundary conditions
+                if (r_ij[0] > Lx/2){
+                    r_ij[0] = Lx - r_ij[0];
+                }
+                if (r_ij[1] > Ly/2){
+                    r_ij[1] = Ly - r_ij[1];
+                }
+                if (r_ij[2] > Lz/2){
+                    r_ij[2] = Lz - r_ij[12];
+                }
 
 
                 r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
@@ -180,6 +194,11 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
 
+    double Lx,Ly,Lz;
+
+    Lx = 2*b;
+    Ly = 2*b;
+    Lz = 2*b;
 
     double dt = 0.01;
     int tmax = 100;
@@ -201,6 +220,16 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
             R[i][1] = R[i][1] + V[i][1]*dt;
             R[i][2] = R[i][2] + V[i][2]*dt;
+            // Adjust positions after periodic boundary conditions
+            if (R[i][0] > Lx){
+                R[i][0] = R[i][0] - Lx;
+            }
+            if (R[i][1] > Ly){
+                R[i][1] = R[i][1] - Ly;
+            }
+            if (R[i][2] > Lz){
+                R[i][2] = R[i][2] - Ly;
+            }
         }
         Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
