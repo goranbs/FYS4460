@@ -4,10 +4,12 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    integrator.cpp
+    integrator.cpp \
+    unitconverter.cpp
 
 HEADERS += \
+    unitconverter.h
 
-CXX_FLAGS += -O3 -std=c++0x
+QMAKE_CXXFLAGS += -O3 -std=c++0x
 
 INCLUDEPATH += /home/goranbs/goran/CompPhys/programs/cppLibrary/

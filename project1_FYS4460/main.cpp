@@ -2,9 +2,11 @@
 #include <iomanip>
 #include <time.h>
 #include <fstream>
-#include <lib.h>
+//#include <lib.h>
 #include <vector>
 #include <cmath>
+#include <random>
+
 using namespace std;
 
 double pi = 4*atan(1);
