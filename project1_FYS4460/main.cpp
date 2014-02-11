@@ -157,9 +157,11 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
     double rx,ry,rz,r2,r2i,r6i,r12i;
     double Lx,Ly,Lz;
 
-    Lx = 2*b;
-    Ly = 2*b;
-    Lz = 2*b;
+    vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
+
+    Lx = 2*length;
+    Ly = 2*length;
+    Lz = 2*length;
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
@@ -173,24 +175,25 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 r_ij[1] = ry - R[j][1];  // y
                 r_ij[2] = rz - R[j][2];  // z
 
+
                 // Periodic boundary conditions
                 if (r_ij[0] > Lx/2){
-                    r_ij[0] = Lx - r_ij[0];
+                    r_ij[0] = - Lx + r_ij[0];
                 }
-                if (r_ij[0] < -Lx/2){
+                else if (r_ij[0] < -Lx/2){
                     r_ij[0] = Lx + r_ij[0];
                 }
                 if (r_ij[1] > Ly/2){
-                    r_ij[1] = Ly - r_ij[1];
+                    r_ij[1] = -Ly + r_ij[1];
                 }
-                if (r_ij[1] < -Ly/2){
+                else if (r_ij[1] < -Ly/2){
                     r_ij[1] = Ly + r_ij[1];
                 }
                 if (r_ij[2] > Lz/2){
-                    r_ij[2] = Lz - r_ij[12];
+                    r_ij[2] = -Lz + r_ij[2];
                 }
-                if (r_ij[2] < -Lz/2){
-                    r_ij[2] = Lz + r_ij[12];
+                else if (r_ij[2] < -Lz/2){
+                    r_ij[2] = Lz + r_ij[2];
                 }
 
                 r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
@@ -205,6 +208,8 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
                 f[1] = f[1] + fij[1];
                 f[2] = f[2] + fij[2];
+
+
 
 
                 force = force + 1;
@@ -255,29 +260,33 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
+
             R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
             R[i][1] = R[i][1] + V[i][1]*dt;
             R[i][2] = R[i][2] + V[i][2]*dt;
+
             // Adjust positions after periodic boundary conditions
             if (R[i][0] > Lx){
                 R[i][0] = R[i][0] - Lx;
             }
-            if (R[i][0] < 0){
+
+            else if (R[i][0] < 0){
                 R[i][0] = R[i][0] + Lx;
             }
             if (R[i][1] > Ly){
                 R[i][1] = R[i][1] - Ly;
             }
-            if (R[i][1] < 0){
+            else if (R[i][1] < 0){
                 R[i][1] = R[i][1] + Ly;
             }
             if (R[i][2] > Lz){
-                R[i][2] = R[i][2] - Ly;
+                R[i][2] = R[i][2] - Lz;
             }
-            if (R[i][2] < 0){
+            else if (R[i][2] < 0){
                 R[i][2] = R[i][2] + Lz;
             }
         }
+
         Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
@@ -309,6 +318,7 @@ int main(){
     vector < vector < double > > R; // positions
     vector < vector < double > > V; // velocities
     int N;
+
 
     initialize(V,R,N);
 
