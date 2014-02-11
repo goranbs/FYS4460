@@ -58,23 +58,21 @@ double random_number(){
     return val;
 }
 
-void initialize(vector < vector < double > > &V, vector < vector < double > > &R, int &N){
+void initialize(vector < vector < double > > &V, vector < vector < double > > &R, int &N, int Nx, int Ny, int Nz){
 
     /*   Initialize system:
      * - initial particle positions   - fcc
      * - initial particle velocities  - Boltzmann distibution
      */
 
-    double x,y,z,Nx,Ny,Nz,Lx,Ly,Lz;
+    double x,y,z;
     int natom,N_atoms;
 
-    Nx = 2;    // number of origins (from where to place the four atoms) within a box
-    Ny = 2;
-    Nz = 2;
-
-    Lx = Nx*length;   // length of box along x-axis
+    double Lx,Ly,Lz;
+    Lx = Nx*length;
     Ly = Ny*length;
     Lz = Nz*length;
+    cout << Nx << " " << Ny << " " << Nz << endl;
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
@@ -123,21 +121,43 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
      * string filename = "state000.xyz", open file and write initial postions and velocities;
      */
 
-    double sum_v = 0;
-    double quad_sum_v = 0;
-    double mean_v;
-    double std_dev;
+    double sum_v_x = 0;
+    double sum_v_y = 0;
+    double sum_v_z = 0;
+    double mean_x,mean_y,mean_z;
+    double quad_sum_x = 0;
+    double quad_sum_y = 0;
+    double quad_sum_z = 0;
+    double std_dev_x;
+    double std_dev_y;
+    double std_dev_z;
 
     for (int i=0;i<N;++i){
         //cout << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
-        sum_v = sum_v + (V[i][0] + V[i][1] + V[i][2]);
-        quad_sum_v = quad_sum_v + (V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]);
+        sum_v_x = sum_v_x + V[i][0];
+        sum_v_y = sum_v_y + V[i][1];
+        sum_v_z = sum_v_z + V[i][2];
+        quad_sum_x = quad_sum_x + V[i][0]*V[i][0];
+        quad_sum_y = quad_sum_y + V[i][1]*V[i][1];
+        quad_sum_z= quad_sum_z + V[i][2]*V[i][2];
     }
 
-    mean_v = sum_v/N;
-    std_dev = sqrt(quad_sum_v/N - mean_v*mean_v);
+    mean_x = sum_v_x/float(N);
+    mean_y = sum_v_y/float(N);
+    mean_z = sum_v_z/float(N);
+    quad_sum_x = quad_sum_x/float(N);
+    quad_sum_y = quad_sum_y/float(N);
+    quad_sum_z = quad_sum_z/float(N);
+
+    std_dev_x = sqrt(quad_sum_x - mean_x*mean_x);
+    std_dev_y = sqrt(quad_sum_y - mean_y*mean_y);
+    std_dev_z = sqrt(quad_sum_z - mean_z*mean_z);
+
     cout << "----------------------------------------------------------" << endl;
-    cout  << "mean velocity = " << mean_v << " with standard deviation = " << std_dev << endl;
+    cout << " mean speed x: " << mean_x << " stdev= " << std_dev_x << endl;
+    cout << " mean speed y: " << mean_y << " stdev= " << std_dev_y << endl;
+    cout << " mean speed z: " << mean_z << " stdev= " << std_dev_z << endl;
+    cout  << "---------------------------------------------------------" << endl;
 
     ofstream myfile;
     myfile.open("state000.xyz");
@@ -150,18 +170,14 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N){
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N, double Lx, double Ly, double Lz){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
     double rx,ry,rz,r2,r2i,r6i,r12i;
-    double Lx,Ly,Lz;
 
     vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
 
-    Lx = 2*length;
-    Ly = 2*length;
-    Lz = 2*length;
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
@@ -227,7 +243,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 }
 
 
-void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N){
+void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N, double Lx, double Ly, double Lz){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -237,11 +253,6 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
 
-    double Lx,Ly,Lz;
-
-    Lx = 2*length;
-    Ly = 2*length;
-    Lz = 2*length;
 
     double dt = 0.02;
     int tmax = 200;
@@ -287,7 +298,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             }
         }
 
-        Lennard_Jones(F,R,N);              // calculate the force at time (t+dt) using the new positions.
+        Lennard_Jones(F,R,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -318,11 +329,18 @@ int main(){
     vector < vector < double > > R; // positions
     vector < vector < double > > V; // velocities
     int N;
+    double Nx, Ny, Nz; // number of origins
+    double Lx,Ly,Lz;   // lattice length
+    Nx = 3;
+    Ny = 3;
+    Nz = 3;
+    Lx = Nx*length;
+    Ly = Ny*length;
+    Lz = Nz*length;
 
+    initialize(V,R,N,Nx,Ny,Nz);
 
-    initialize(V,R,N);
-
-    integrator(V,R,N);
+    integrator(V,R,N,Lx,Ly,Lz);
 
     return 0;
 }
