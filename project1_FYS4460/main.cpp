@@ -160,9 +160,9 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     cout  << "---------------------------------------------------------" << endl;
 
     ofstream myfile;
-    myfile.open("state000.xyz");
+    myfile.open("state000.txt");
     myfile << N << endl;
-    myfile << "initial state fcc lattice of Argon gass" << endl;
+    myfile << "initial_state_fcc_lattice_of_Argon_gass" << " " << 0.0 << endl;
     for (int i=0;i<N;++i){
         myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << endl;
     }
@@ -261,11 +261,11 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     for (int t=1;t<tmax;++t){
         char filename [20];
-        sprintf(filename, "state%03d.xyz", t);
+        sprintf(filename, "state%03d.txt", t);
         ofstream myfile;
         myfile.open(filename);
         myfile << N << endl;
-        myfile << filename << " time:" << t*dt << endl;
+        myfile << filename << "time: " << t*dt << endl;
 
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
@@ -304,11 +304,10 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][1] = V[i][2] + F[i][2]*dt/(2*m);
             // Write to file:
-
             myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << endl;
         }
         myfile.close();
-        Time_vec.push_back(t*dt);
+        Time_vec.push_back(t*dt/Time_0); // [fs]
     }
 }
 
