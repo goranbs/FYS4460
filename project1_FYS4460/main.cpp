@@ -27,7 +27,7 @@ UnitConverter leng;
 double length = leng.from_aangstrom(b);  // unitless length
 
 UnitConverter nrj;
-double E = nrj.from_energy(eps);                // unitless energy
+double E = nrj.from_energy(eps);         // unitless energy
 
 UnitConverter mass;
 double m = mass.from_amu(mA);            // unitless mass
@@ -164,24 +164,26 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     myfile << N << endl;
     myfile << "initial_state_fcc_lattice_of_Argon_gass" << " " << 0.0 << endl;
     for (int i=0;i<N;++i){
-        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << endl;
+        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << endl;
     }
     myfile.close();
 
 }
 
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N, double Lx, double Ly, double Lz){
+double  Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N, double Lx, double Ly, double Lz){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
-    double rx,ry,rz,r2,r2i,r6i,r12i;
-
+    double rx,ry,rz,r2,r2i,r6i,r12i,U,K;
     vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
-
+    double len6 = pow(length,6.0);
+    K = 4*eps*len6;
+    U = 0;
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
         vector < double > f (3);   //  sums up to total force on i
+        double Ui = 0; // potential energy
         for (int j = 0; j < N; ++j) {
             if ( j != i) {
                 vector < double > r_ij (3);
@@ -226,13 +228,15 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 f[2] = f[2] + fij[2];
 
 
+                Ui = Ui + (len6*r12i - r6i); // sum up the potential energy for particle i.
 
 
                 force = force + 1;
             } // end if
         } // end for j
 
-        F[i] = f;  // total force in [x,y,z] on particle i
+        F[i] = f;   // total force in [x,y,z] on particle i
+        U = U + Ui; // total potential energy
     } // end for i
 
 
@@ -240,7 +244,10 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 //    for (int i = 0; i < N; ++i) {
 //        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
 //    }
-}
+    UnitConverter(enerji);
+    K = enerji.from_energy(K);
+    return U*K;
+} // returns the total unitless potential energy
 
 
 void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N, double Lx, double Ly, double Lz){
@@ -256,6 +263,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     double dt = 0.02;
     int tmax = 200;
+    double E_kin,U,E_tot;   // E_tot = E_kin + U
 
     vector < double > Time_vec ;
 
@@ -280,16 +288,17 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             if (R[i][0] > Lx){
                 R[i][0] = R[i][0] - Lx;
             }
-
             else if (R[i][0] < 0){
                 R[i][0] = R[i][0] + Lx;
             }
+
             if (R[i][1] > Ly){
                 R[i][1] = R[i][1] - Ly;
             }
             else if (R[i][1] < 0){
                 R[i][1] = R[i][1] + Ly;
             }
+
             if (R[i][2] > Lz){
                 R[i][2] = R[i][2] - Lz;
             }
@@ -298,13 +307,16 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             }
         }
 
-        Lennard_Jones(F,R,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
+        double U = Lennard_Jones(F,R,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][1] = V[i][2] + F[i][2]*dt/(2*m);
+
+            E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][0]*V[i][0] + V[i][0]*V[i][0]);
+            E_tot = E_kin + U;
             // Write to file:
-            myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << endl;
+            myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
         }
         myfile.close();
         Time_vec.push_back(t*dt/Time_0); // [fs]
