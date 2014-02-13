@@ -46,7 +46,6 @@ double velocity = sigma/Time_0;          // Conversion factor velocity
 
 
 
-
 double random_number(){
     /****************************************************************************
      *  Random number generator - Bolzmann distribution
@@ -170,15 +169,12 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-double  Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, int &N, double Lx, double Ly, double Lz){
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int &N, double Lx, double Ly, double Lz){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
-    double rx,ry,rz,r2,r2i,r6i,r12i,U,K;
+    double rx,ry,rz,r2,r2i,r6i,r12i;
     vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
-    double len6 = pow(length,6.0);
-    K = 4*eps*len6;
-    U = 0;
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
@@ -228,15 +224,14 @@ double  Lennard_Jones(vector < vector < double > > &F, vector < vector < double 
                 f[2] = f[2] + fij[2];
 
 
-                Ui = Ui + (len6*r12i - r6i); // sum up the potential energy for particle i.
-
+                Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
 
                 force = force + 1;
             } // end if
         } // end for j
 
         F[i] = f;   // total force in [x,y,z] on particle i
-        U = U + Ui; // total potential energy
+        U.push_back(Ui); // total potential energy
     } // end for i
 
 
@@ -244,9 +239,7 @@ double  Lennard_Jones(vector < vector < double > > &F, vector < vector < double 
 //    for (int i = 0; i < N; ++i) {
 //        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
 //    }
-    UnitConverter(enerji);
-    K = enerji.from_energy(K);
-    return U*K;
+
 } // returns the total unitless potential energy
 
 
@@ -259,11 +252,15 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
      */
 
     vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
-
+    vector < double >  U (N,0); // Vector that holds the potential energy for particle i.
+    vector < double > E_system;
 
     double dt = 0.02;
     int tmax = 200;
-    double E_kin,U,E_tot;   // E_tot = E_kin + U
+    double E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
+    double E_mean_system, E_quad, E_stdev;
+    E_mean_system = 0;
+    E_quad = 0;
 
     vector < double > Time_vec ;
 
@@ -274,7 +271,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         myfile.open(filename);
         myfile << N << endl;
         myfile << filename << "time: " << t*dt << endl;
-
+        E_tot_system = 0;
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -307,20 +304,37 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             }
         }
 
-        double U = Lennard_Jones(F,R,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
+        Lennard_Jones(F,R,U,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][1] = V[i][2] + F[i][2]*dt/(2*m);
 
             E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][0]*V[i][0] + V[i][0]*V[i][0]);
-            E_tot = E_kin + U;
+            E_tot = E_kin + U[i]; // total energy for particle i
+            E_tot_system += E_tot;
             // Write to file:
             myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
         }
         myfile.close();
         Time_vec.push_back(t*dt/Time_0); // [fs]
+
+        E_system.push_back(E_tot_system);
+        //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
+
+    // calculate the total energy of the system and its standard deviation:
+    for (int index = 0; index < N; ++index) {
+        E_mean_system = E_mean_system + E_system[index];
+        E_quad = E_quad + E_system[index]*E_system[index];
+    }
+    E_mean_system = E_mean_system/float(N);
+    E_quad = E_quad/float(N);
+    //cout << E_mean_system << endl;
+    //cout << E_quad << endl;
+    E_stdev = sqrt(E_quad - E_mean_system*E_mean_system);
+    cout << "Total energy of the system= " << E_mean_system << "+-" << E_stdev << endl;
+    cout << "fluctuation is " << 100*E_stdev/E_mean_system << "%" << endl;
 }
 
 
