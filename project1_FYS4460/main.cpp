@@ -12,12 +12,12 @@ using namespace std;
 
 double pi = 4*atan(1);
 
+// Check out the constants, do they fit with those in the project text?
 double b = 5.260;                 // Ångstrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
-double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV]
+double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
 double Temp = 100.0;              // Kelvin, initial temperature
-//double T = (kB/eps)*Temp;       // unitless temperature
 double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
 /********************************************************************************
  * Conversion factors, so that we get out units that we would like to use
@@ -38,9 +38,10 @@ double Time = time_0.from_time(Time_0);  // unitless time
 
 double F_0 = mA*sigma/(Time_0*Time_0);   // Conversion factor force
 
-double T_0 = eps/kB;                     // Conversion factor temperature
+double T_0 = 119.74; // [K] eps/kB;                     // Conversion factor temperature
 
 double velocity = sigma/Time_0;          // Conversion factor velocity
+
 /********************************************************************************
  */
 
@@ -254,10 +255,11 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
     vector < double >  U (N,0); // Vector that holds the potential energy for particle i.
     vector < double > E_system;
+    vector < double > Temperature;
 
     double dt = 0.02;
     int tmax = 200;
-    double E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
+    double Ek, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
     E_quad = 0;
@@ -304,6 +306,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             }
         }
 
+        Ek = 0;
         Lennard_Jones(F,R,U,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
@@ -312,16 +315,29 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
             E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][0]*V[i][0] + V[i][0]*V[i][0]);
             E_tot = E_kin + U[i]; // total energy for particle i
+            Ek += E_kin;          // total kinetic energy
             E_tot_system += E_tot;
             // Write to file:
             myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
         }
         myfile.close();
-        Time_vec.push_back(t*dt/Time_0); // [fs]
-
-        E_system.push_back(E_tot_system);
+        Time_vec.push_back(t*dt/Time_0);           // [fs]
+        E_system.push_back(E_tot_system);          // Energy of the system.
+        Temperature.push_back(2/(3.0*N*N)*Ek);     // Temperature
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
+
+    // Write temperatures to file temperatures.txt
+    char tempr [20];
+    sprintf(tempr,"temperatures.txt");
+    ofstream ofile;
+    ofile.open(tempr);
+    ofile << "Temperature of system as a function of time" << endl;
+    ofile << "[Temprature,K] [Time,fs]" << endl;
+    for (int i = 0; i < N; ++i) {
+        ofile << Temperature[i] << " " << i*dt/Time_0 << endl;
+    }
+    ofile.close();
 
     // calculate the total energy of the system and its standard deviation:
     for (int index = 0; index < N; ++index) {
@@ -348,7 +364,7 @@ int main(){
     cout << "scaled length: " << length << endl;
     cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
     cout << "scaled Energy: " << eps/E << endl;
-    cout << "scaled Temp.:  " << Temp/T_0 << endl;
+    cout << "scaled Temp.:  " << T_0 << endl;
 
     // create a vector within a vector, using including the <vector> library.
     vector < vector < double > > R; // positions
