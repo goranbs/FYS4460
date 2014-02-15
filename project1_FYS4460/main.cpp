@@ -13,7 +13,8 @@ using namespace std;
 double pi = 4*atan(1);
 
 // Check out the constants, do they fit with those in the project text?
-double b = 5.260;                 // Ångstrøm [Å]
+//double b = 5.260;                 // Ångstrøm [Å]
+double b = 178.0;                 // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
@@ -38,7 +39,7 @@ double Time = time_0.from_time(Time_0);  // unitless time
 
 double F_0 = mA*sigma/(Time_0*Time_0);   // Conversion factor force
 
-double T_0 = 119.74; // [K] eps/kB;                     // Conversion factor temperature
+double T_0 = 119.74; // [K] eps/kB;      // Conversion factor temperature
 
 double velocity = sigma/Time_0;          // Conversion factor velocity
 
@@ -256,6 +257,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double >  U (N,0); // Vector that holds the potential energy for particle i.
     vector < double > E_system;
     vector < double > Temperature;
+    vector < double > Ekin;
 
     double dt = 0.02;
     int tmax = 200;
@@ -323,7 +325,8 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         myfile.close();
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(E_tot_system);          // Energy of the system.
-        Temperature.push_back(2/(3.0*N*N)*Ek);     // Temperature
+        Ekin.push_back(Ek);
+        Temperature.push_back(2/(3.0*N)*Ek);     // Temperature
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
 
@@ -333,9 +336,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     ofstream ofile;
     ofile.open(tempr);
     ofile << "Temperature of system as a function of time" << endl;
-    ofile << "[Temprature,K] [Time,fs]" << endl;
+    ofile << "[Temprature,K] [Time,fs] [E_kin]" << endl;
     for (int i = 0; i < N; ++i) {
-        ofile << Temperature[i] << " " << i*dt/Time_0 << endl;
+        ofile << Temperature[i]*T_0 << " " << i*dt/Time_0 << " " << Ekin[i]*eps << endl;
     }
     ofile.close();
 
@@ -378,6 +381,12 @@ int main(){
     Lx = Nx*length;
     Ly = Ny*length;
     Lz = Nz*length;
+
+    // Cells
+    double Lcx,Lcy,Lcz; // length of cell
+    Lcx = Lx/3;
+    Lcy = Ly/3;
+    Lcz = Lz/3;
 
     initialize(V,R,N,Nx,Ny,Nz);
 

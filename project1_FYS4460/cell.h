@@ -9,6 +9,7 @@ class Cell
 public:
     Cell();
 
+
 private:
     vector < int > atomindices ;
     vector < int > vectorCellID;
