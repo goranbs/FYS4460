@@ -372,9 +372,9 @@ int main(){
     int N;
     double Nx, Ny, Nz; // number of origins
     double Lx,Ly,Lz;   // lattice length
-    Nx = 3;
-    Ny = 3;
-    Nz = 3;
+    Nx = 5;
+    Ny = 5;
+    Nz = 5;
     Lx = Nx*length;
     Ly = Ny*length;
     Lz = Nz*length;

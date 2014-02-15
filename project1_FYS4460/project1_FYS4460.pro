@@ -5,10 +5,12 @@ CONFIG -= qt
 
 SOURCES += main.cpp \
     integrator.cpp \
-    unitconverter.cpp
+    unitconverter.cpp \
+    cell.cpp
 
 HEADERS += \
-    unitconverter.h
+    unitconverter.h \
+    cell.h
 
 QMAKE_CXXFLAGS += -O3 -std=c++0x
 
