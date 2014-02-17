@@ -7,6 +7,7 @@
 #include <cmath>
 #include <random>
 #include <unitconverter.h>
+#include <list>
 
 using namespace std;
 
@@ -43,11 +44,11 @@ double T_0 = 119.74; // [K] eps/kB;      // Conversion factor temperature
 
 double velocity = sigma/Time_0;          // Conversion factor velocity
 
+
 /********************************************************************************
+ *                    Random Number Generator
+ * ******************************************************************************
  */
-
-
-
 double random_number(){
     /****************************************************************************
      *  Random number generator - Bolzmann distribution
@@ -59,6 +60,59 @@ double random_number(){
     return val;
 }
 
+
+/********************************************************************************
+ *                    Initialize Box List
+ * ******************************************************************************
+ */
+void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, int nz, vector < vector < double > > &R, vector < list < int > > &box_list){
+    /* function that creates the box_list
+     */
+
+    int ix,iy,iz,box_index;
+    for (int p = 0; p < R.size(); ++p) {
+        // Create x,y and z index for particle p.
+        ix = floor(R[p][0]/Lcx);
+        iy = floor(R[p][1]/Lcy);
+        iz = floor(R[p][2]/Lcz);
+        box_index = ix*nx*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
+        box_list[box_index].push_back(p);        // put particle p into box number box_index
+    }
+
+
+    //usage linked lists:
+//    for (auto it = box_list[0].begin(); it != box_list[0].end(); ++it) {
+//        int atom_index = *it;
+//        cout << "atomindex: " << atom_index << endl;
+//    }
+
+}
+
+/********************************************************************************
+ *                    Update Box List
+ * ******************************************************************************
+ */
+void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz, vector < vector < double > > &R,vector < list < int > > &box_list){
+    /* Function that updates the box list :-) - that is, it puts the particle into the box it belongs to:-)
+     */
+
+    int ix,iy,iz,box_index;
+    for (int p = 0; p < R.size(); ++p) {
+        // Create x,y and z index for particle p.
+        ix = floor(R[p][0]/Lcx);
+        iy = floor(R[p][1]/Lcy);
+        iz = floor(R[p][2]/Lcz);
+        box_index = ix*nx*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
+        box_list[box_index].push_back(p);        // put particle p into box number box_index
+    }
+
+
+}
+
+/********************************************************************************
+ *                    Initialize state
+ * ******************************************************************************
+ */
 void initialize(vector < vector < double > > &V, vector < vector < double > > &R, int &N, int Nx, int Ny, int Nz){
 
     /*   Initialize system:
@@ -81,6 +135,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     /*****************************************************************************
      *               Initial positions and velocities
      */
+
 
     natom = 0;
     for (int ix=0; ix < Nx; ++ix) {
@@ -112,10 +167,13 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
                 V.push_back(v);
 
 
+
                 natom = natom+4;
             }
         }
     }
+
+
 
     /*********************************************************************************************
      *                     Write initial conditions to file
@@ -174,6 +232,8 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int &N, double Lx, double Ly, double Lz){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
+
+
 
     double rx,ry,rz,r2,r2i,r6i,r12i;
     vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
@@ -384,11 +444,27 @@ int main(){
 
     // Cells
     double Lcx,Lcy,Lcz; // length of cell
-    Lcx = Lx/3;
-    Lcy = Ly/3;
-    Lcz = Lz/3;
+    double N_cells_x,N_cells_y,N_cells_z;        // number of cells
+    N_cells_x = N_cells_y = N_cells_z = 3.0;
+    int N_boxes;
+    N_boxes = int(N_cells_x*N_cells_y*N_cells_z);
+
+    Lcx = Lx/N_cells_x;
+    Lcy = Ly/N_cells_y;
+    Lcz = Lz/N_cells_z;
+    // endsure that the total length of the cells equals the length dimentions of the box.
+    N_cells_x = Lx/Lcx;
+    N_cells_y = Ly/Lcy;
+    N_cells_z = Lz/Lcz;
+    Lcx = Lx/N_cells_x;
+    Lcy = Ly/N_cells_y;
+    Lcz = Lz/N_cells_z;
+
+    vector < list < int > > box_list(N_cells_x*N_cells_y*N_cells_z);
 
     initialize(V,R,N,Nx,Ny,Nz);
+
+    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
     integrator(V,R,N,Lx,Ly,Lz);
 
