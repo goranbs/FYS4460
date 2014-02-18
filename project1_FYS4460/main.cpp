@@ -15,7 +15,7 @@ double pi = 4*atan(1);
 
 // Check out the constants, do they fit with those in the project text?
 //double b = 5.260;                 // Ångstrøm [Å]
-double b = 178.0;                 // Ångsrøm [Å]
+double b = 18.0;                 // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
@@ -78,13 +78,6 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
         box_index = ix*nx*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
         box_list[box_index].push_back(p);        // put particle p into box number box_index
     }
-
-
-    //usage linked lists:
-//    for (auto it = box_list[0].begin(); it != box_list[0].end(); ++it) {
-//        int atom_index = *it;
-//        cout << "atomindex: " << atom_index << endl;
-//    }
 
 }
 
@@ -229,14 +222,59 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int &N, double Lx, double Ly, double Lz){
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int &N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
+    //usage linked lists:
+//    for (auto it = box_list[0].begin(); it != box_list[0].end(); ++it) {
+//        int atom_index = *it;
+//        cout << "atomindex: " << atom_index << endl;
+//    }
 
+//    double rx,ry,rz,r2,r2i,r6i,r12i;
+//    for (int box_x = 0; box_x < N_cells_x; ++box_x){
+//        for (int box_y = 0; box_y < N_cells_y; ++box_y){
+//            for (int box_y = 0; box_y < N_cells_y; ++box_y){
+
+//                box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
+
+//                for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
+//                    int ai = *it;  // ai = atom_index in box_list
+
+//                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai.
+//                    for (int ix=-1; ix<=1; ++ix){ // box number -1,0,1
+//                        for (int iy=-1; iy<=1; ++iy){
+//                            for (int iz=-1; iz<=1; ++iz){
+
+//                                if (box_x = 0){ box_x = box_x + N_cells_x;}
+//                                else if (box_x = N_cells_x){ box_x = box_x - N_cells_x;}
+
+//                                if (box_x = 0){ box_y = box_y + N_cells_y; }
+//                                else if (box_y = N_cells_y){box_y = box_y - N_cells_y;}
+
+//                                if (box_z = 0){ box_z = box_z + N_cells_z;}
+//                                else if (box_z = N_cells_z){box_z = box_z - N_cells;}
+
+
+//                                int neighbour_i = ix*N_cells_x*N_cells_z + iy*N_cells_z + iz;   // neighbour_index cubic to linear transform
+
+//                                r_ij[0] = rx - R[neighbour_i][0];
+//                                r_ij[1] = ry - R[neighbour_i][1];
+//                                r_ij[2] = rz - R[neighbour_i][2];
+
+
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     double rx,ry,rz,r2,r2i,r6i,r12i;
-    vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
+    //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
+
     int force = 0;
     for (int i = 0; i < N; ++i) {
         rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
@@ -466,7 +504,7 @@ int main(){
 
     initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
-    integrator(V,R,N,Lx,Ly,Lz);
+    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);
 
     return 0;
 }
