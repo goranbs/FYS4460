@@ -75,8 +75,8 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
         ix = floor(R[p][0]/Lcx);
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
-        box_index = ix*nx*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
-        box_list[box_index].push_back(p);        // put particle p into box number box_index
+        box_index = ix*nx*nz + iy*nz + iz;     // cubic to linear transform, (nested lists)
+        box_list[box_index].push_back(p);      // put particle p into box number box_index
     }
 
 }
@@ -120,6 +120,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     Lx = Nx*length;
     Ly = Ny*length;
     Lz = Nz*length;
+    cout << "Nx Ny Nz" << endl;
     cout << Nx << " " << Ny << " " << Nz << endl;
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
@@ -226,26 +227,28 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
 
-    //usage linked lists:
-//    for (auto it = box_list[0].begin(); it != box_list[0].end(); ++it) {
-//        int atom_index = *it;
-//        cout << "atomindex: " << atom_index << endl;
-//    }
 
 //    double rx,ry,rz,r2,r2i,r6i,r12i;
+//    int force = 0;
 //    for (int box_x = 0; box_x < N_cells_x; ++box_x){
 //        for (int box_y = 0; box_y < N_cells_y; ++box_y){
-//            for (int box_y = 0; box_y < N_cells_y; ++box_y){
+//            for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-//                box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
+//                int box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
 
 //                for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
 //                    int ai = *it;  // ai = atom_index in box_list
 
-//                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai.
+//                    vector < double > f (3) ; // sums up the total force on particle ai.
+//                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai in box box_index.
+//                    double Ui = 0; // sums up the potential energy for particle ai.
+
 //                    for (int ix=-1; ix<=1; ++ix){ // box number -1,0,1
 //                        for (int iy=-1; iy<=1; ++iy){
 //                            for (int iz=-1; iz<=1; ++iz){
+//                                box_x = box_x + ix;
+//                                box_y = box_y + iy;
+//                                box_z = box_z + iz;
 
 //                                if (box_x = 0){ box_x = box_x + N_cells_x;}
 //                                else if (box_x = N_cells_x){ box_x = box_x - N_cells_x;}
@@ -254,23 +257,118 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 //                                else if (box_y = N_cells_y){box_y = box_y - N_cells_y;}
 
 //                                if (box_z = 0){ box_z = box_z + N_cells_z;}
-//                                else if (box_z = N_cells_z){box_z = box_z - N_cells;}
+//                                else if (box_z = N_cells_z){box_z = box_z - N_cells_z;}
+
+//                                // neighbour_index cubic to linear transform:
+//                                int neighbour = ix*N_cells_x*N_cells_z + iy*N_cells_z + iz;
+
+//                                auto iterator = it;
+//                                for (auto it2 = ++ iterator + box_list[neighbour].begin(); it2 != box_list[neighbour].end(); ++iterator){
+//                                    int aj = *it2;
+//                                    vector < double > r_ij (3); // distance between particle ai and aj.
+//                                    vector < double > fij (3);  // force between particle ai and aj.
+
+//                                    if (neighbour == box_index){
+//                                        if (ai != aj){
+
+//                                            r_ij[0] = rx - R[aj][0];
+//                                            r_ij[1] = ry - R[aj][1];
+//                                            r_ij[2] = rz - R[aj][2];
+
+//                                            // Periodic boundary conditions
+//                                            if (r_ij[0] > Lx/2){
+//                                                r_ij[0] = - Lx + r_ij[0];
+//                                            }
+//                                            else if (r_ij[0] < -Lx/2){
+//                                                r_ij[0] = Lx + r_ij[0];
+//                                            }
+//                                            if (r_ij[1] > Ly/2){
+//                                                r_ij[1] = -Ly + r_ij[1];
+//                                            }
+//                                            else if (r_ij[1] < -Ly/2){
+//                                                r_ij[1] = Ly + r_ij[1];
+//                                            }
+//                                            if (r_ij[2] > Lz/2){
+//                                                r_ij[2] = -Lz + r_ij[2];
+//                                            }
+//                                            else if (r_ij[2] < -Lz/2){
+//                                                r_ij[2] = Lz + r_ij[2];
+//                                            }
+
+//                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+//                                            r2i = 1.0/r2;
+//                                            r6i = r2i*r2i*r2i;
+//                                            r12i = r6i*r6i;
+
+//                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+//                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+//                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+//                                            f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+//                                            f[1] = f[1] + fij[1];
+//                                            f[2] = f[2] + fij[2];
 
 
-//                                int neighbour_i = ix*N_cells_x*N_cells_z + iy*N_cells_z + iz;   // neighbour_index cubic to linear transform
+//                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
 
-//                                r_ij[0] = rx - R[neighbour_i][0];
-//                                r_ij[1] = ry - R[neighbour_i][1];
-//                                r_ij[2] = rz - R[neighbour_i][2];
+//                                            force = force + 1;
+
+//                                        }
+//                                    }
+//                                    else {
+//                                        r_ij[0] = rx - R[aj][0];
+//                                        r_ij[1] = ry - R[aj][1];
+//                                        r_ij[2] = rz - R[aj][2];
+
+//                                        // Periodic boundary conditions
+//                                        if (r_ij[0] > Lx/2){
+//                                            r_ij[0] = - Lx + r_ij[0];
+//                                        }
+//                                        else if (r_ij[0] < -Lx/2){
+//                                            r_ij[0] = Lx + r_ij[0];
+//                                        }
+//                                        if (r_ij[1] > Ly/2){
+//                                            r_ij[1] = -Ly + r_ij[1];
+//                                        }
+//                                        else if (r_ij[1] < -Ly/2){
+//                                            r_ij[1] = Ly + r_ij[1];
+//                                        }
+//                                        if (r_ij[2] > Lz/2){
+//                                            r_ij[2] = -Lz + r_ij[2];
+//                                        }
+//                                        else if (r_ij[2] < -Lz/2){
+//                                            r_ij[2] = Lz + r_ij[2];
+//                                        }
+
+//                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+//                                        r2i = 1.0/r2;
+//                                        r6i = r2i*r2i*r2i;
+//                                        r12i = r6i*r6i;
+
+//                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+//                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+//                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+//                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+//                                        f[1] = f[1] + fij[1];
+//                                        f[2] = f[2] + fij[2];
 
 
+//                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+//                                        force = force + 1;
+//                                    }
+//                                }
 //                            }
 //                        }
 //                    }
+//                    F[ai] = f;   // total force in [x,y,z] on particle i
+//                    U.push_back(Ui); // total potential energy
 //                }
 //            }
 //        }
 //    }
+
 
     double rx,ry,rz,r2,r2i,r6i,r12i;
     //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
@@ -335,7 +433,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
     } // end for i
 
 
-//    cout << "------Forces on particle i------------" << endl;
+    //cout << "------Forces on particle i------------" << endl;
 //    for (int i = 0; i < N; ++i) {
 //        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
 //    }
@@ -343,7 +441,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 } // returns the total unitless potential energy
 
 
-void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N, double Lx, double Ly, double Lz){
+void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -406,8 +504,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             }
         }
 
+        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
         Ek = 0;
-        Lennard_Jones(F,R,U,N,Lx,Ly,Lz);              // calculate the force at time (t+dt) using the new positions.
+        Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -424,7 +523,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(E_tot_system);          // Energy of the system.
         Ekin.push_back(Ek);
-        Temperature.push_back(2/(3.0*N)*Ek);     // Temperature
+        double tempi = 2*Ek/(3.0*N);
+        Temperature.push_back(tempi);     // Temperature
+        cout << "t= " << t << " E= " << E_tot_system << " T= " << tempi << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
 
@@ -504,7 +605,7 @@ int main(){
 
     initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
-    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);
+    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
 
     return 0;
 }
