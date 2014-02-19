@@ -228,209 +228,218 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
      */
 
 
-//    double rx,ry,rz,r2,r2i,r6i,r12i;
-//    int force = 0;
-//    for (int box_x = 0; box_x < N_cells_x; ++box_x){
-//        for (int box_y = 0; box_y < N_cells_y; ++box_y){
-//            for (int box_z = 0; box_z < N_cells_z; ++box_z){
-
-//                int box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
-
-//                for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
-//                    int ai = *it;  // ai = atom_index in box_list
-
-//                    vector < double > f (3) ; // sums up the total force on particle ai.
-//                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai in box box_index.
-//                    double Ui = 0; // sums up the potential energy for particle ai.
-
-//                    for (int ix=-1; ix<=1; ++ix){ // box number -1,0,1
-//                        for (int iy=-1; iy<=1; ++iy){
-//                            for (int iz=-1; iz<=1; ++iz){
-//                                box_x = box_x + ix;
-//                                box_y = box_y + iy;
-//                                box_z = box_z + iz;
-
-//                                if (box_x = 0){ box_x = box_x + N_cells_x;}
-//                                else if (box_x = N_cells_x){ box_x = box_x - N_cells_x;}
-
-//                                if (box_x = 0){ box_y = box_y + N_cells_y; }
-//                                else if (box_y = N_cells_y){box_y = box_y - N_cells_y;}
-
-//                                if (box_z = 0){ box_z = box_z + N_cells_z;}
-//                                else if (box_z = N_cells_z){box_z = box_z - N_cells_z;}
-
-//                                // neighbour_index cubic to linear transform:
-//                                int neighbour = ix*N_cells_x*N_cells_z + iy*N_cells_z + iz;
-
-//                                auto iterator = it;
-//                                for (auto it2 = ++ iterator + box_list[neighbour].begin(); it2 != box_list[neighbour].end(); ++iterator){
-//                                    int aj = *it2;
-//                                    vector < double > r_ij (3); // distance between particle ai and aj.
-//                                    vector < double > fij (3);  // force between particle ai and aj.
-
-//                                    if (neighbour == box_index){
-//                                        if (ai != aj){
-
-//                                            r_ij[0] = rx - R[aj][0];
-//                                            r_ij[1] = ry - R[aj][1];
-//                                            r_ij[2] = rz - R[aj][2];
-
-//                                            // Periodic boundary conditions
-//                                            if (r_ij[0] > Lx/2){
-//                                                r_ij[0] = - Lx + r_ij[0];
-//                                            }
-//                                            else if (r_ij[0] < -Lx/2){
-//                                                r_ij[0] = Lx + r_ij[0];
-//                                            }
-//                                            if (r_ij[1] > Ly/2){
-//                                                r_ij[1] = -Ly + r_ij[1];
-//                                            }
-//                                            else if (r_ij[1] < -Ly/2){
-//                                                r_ij[1] = Ly + r_ij[1];
-//                                            }
-//                                            if (r_ij[2] > Lz/2){
-//                                                r_ij[2] = -Lz + r_ij[2];
-//                                            }
-//                                            else if (r_ij[2] < -Lz/2){
-//                                                r_ij[2] = Lz + r_ij[2];
-//                                            }
-
-//                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-//                                            r2i = 1.0/r2;
-//                                            r6i = r2i*r2i*r2i;
-//                                            r12i = r6i*r6i;
-
-//                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-//                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-//                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-//                                            f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-//                                            f[1] = f[1] + fij[1];
-//                                            f[2] = f[2] + fij[2];
-
-
-//                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-//                                            force = force + 1;
-
-//                                        }
-//                                    }
-//                                    else {
-//                                        r_ij[0] = rx - R[aj][0];
-//                                        r_ij[1] = ry - R[aj][1];
-//                                        r_ij[2] = rz - R[aj][2];
-
-//                                        // Periodic boundary conditions
-//                                        if (r_ij[0] > Lx/2){
-//                                            r_ij[0] = - Lx + r_ij[0];
-//                                        }
-//                                        else if (r_ij[0] < -Lx/2){
-//                                            r_ij[0] = Lx + r_ij[0];
-//                                        }
-//                                        if (r_ij[1] > Ly/2){
-//                                            r_ij[1] = -Ly + r_ij[1];
-//                                        }
-//                                        else if (r_ij[1] < -Ly/2){
-//                                            r_ij[1] = Ly + r_ij[1];
-//                                        }
-//                                        if (r_ij[2] > Lz/2){
-//                                            r_ij[2] = -Lz + r_ij[2];
-//                                        }
-//                                        else if (r_ij[2] < -Lz/2){
-//                                            r_ij[2] = Lz + r_ij[2];
-//                                        }
-
-//                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-//                                        r2i = 1.0/r2;
-//                                        r6i = r2i*r2i*r2i;
-//                                        r12i = r6i*r6i;
-
-//                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-//                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-//                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-//                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-//                                        f[1] = f[1] + fij[1];
-//                                        f[2] = f[2] + fij[2];
-
-
-//                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-//                                        force = force + 1;
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                    F[ai] = f;   // total force in [x,y,z] on particle i
-//                    U.push_back(Ui); // total potential energy
-//                }
-//            }
-//        }
-//    }
-
-
     double rx,ry,rz,r2,r2i,r6i,r12i;
-    //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
-
     int force = 0;
-    for (int i = 0; i < N; ++i) {
-        rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
-        vector < double > f (3);   //  sums up to total force on i
-        double Ui = 0; // potential energy
-        for (int j = 0; j < N; ++j) {
-            if ( j != i) {
-                vector < double > r_ij (3);
-                vector < double > fij (3);
+    for (int box_x = 0; box_x < N_cells_x; ++box_x){
+        for (int box_y = 0; box_y < N_cells_y; ++box_y){
+            for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
-                r_ij[1] = ry - R[j][1];  // y
-                r_ij[2] = rz - R[j][2];  // z
+                int box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
+
+                for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
+                    int ai = *it;  // ai = atom_index in box_list
+
+                    vector < double > f (3) ; // sums up the total force on particle ai.
+                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai in box box_index.
+                    double Ui = 0; // sums up the potential energy for particle ai.
+
+                    for (int ix=-1; ix<=1; ++ix){ // box number -1,0,1
+                        for (int iy=-1; iy<=1; ++iy){
+                            for (int iz=-1; iz<=1; ++iz){
+                                box_x = box_x + ix;
+                                box_y = box_y + iy;
+                                box_z = box_z + iz;
+
+                                vector < double > r_ij (3); // distance between particle ai and aj.
+                                vector < double > fij (3);  // force between particle ai and aj.
+
+                                if (box_x < 0){ box_x = box_x + N_cells_x;}
+                                else if (box_x > N_cells_x){ box_x = box_x - N_cells_x;}
+
+                                if (box_y < 0){ box_y = box_y + N_cells_y; }
+                                else if (box_y > N_cells_y){box_y = box_y - N_cells_y;}
+
+                                if (box_z < 0){ box_z = box_z + N_cells_z;}
+                                else if (box_z > N_cells_z){box_z = box_z - N_cells_z;}
+
+                                // neighbour_index cubic to linear transform:
+                                int neighbour = box_x*N_cells_x*N_cells_z + box_y*N_cells_z + box_z;
 
 
-                // Periodic boundary conditions
-                if (r_ij[0] > Lx/2){
-                    r_ij[0] = - Lx + r_ij[0];
+
+                                if (neighbour == box_index){
+                                    auto iterator = it;
+                                    for (auto it2 = ++ iterator; it2 != box_list[neighbour].end(); ++iterator){
+                                        int aj = *it2;
+
+
+                                        r_ij[0] = rx - R[aj][0];
+                                        r_ij[1] = ry - R[aj][1];
+                                        r_ij[2] = rz - R[aj][2];
+
+                                        // Periodic boundary conditions
+                                        if (r_ij[0] > Lx/2){
+                                            r_ij[0] = - Lx + r_ij[0];
+                                        }
+                                        else if (r_ij[0] < -Lx/2){
+                                            r_ij[0] = Lx + r_ij[0];
+                                        }
+                                        if (r_ij[1] > Ly/2){
+                                            r_ij[1] = -Ly + r_ij[1];
+                                        }
+                                        else if (r_ij[1] < -Ly/2){
+                                            r_ij[1] = Ly + r_ij[1];
+                                        }
+                                        if (r_ij[2] > Lz/2){
+                                            r_ij[2] = -Lz + r_ij[2];
+                                        }
+                                        else if (r_ij[2] < -Lz/2){
+                                            r_ij[2] = Lz + r_ij[2];
+                                        }
+
+                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                                        r2i = 1.0/r2;
+                                        r6i = r2i*r2i*r2i;
+                                        r12i = r6i*r6i;
+
+                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+                                        f[1] = f[1] + fij[1];
+                                        f[2] = f[2] + fij[2];
+
+
+                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+                                        force = force + 1;
+
+                                }
+                                }
+                                else { // neighbour != box_index, that is, we are looking at the surrounding boxes!
+                                    auto iterator = it;
+                                    for (auto it2 = iterator; it2 != box_list[neighbour].end(); ++iterator){
+                                        int aj = *it2;
+
+
+                                        r_ij[0] = rx - R[aj][0];
+                                        r_ij[1] = ry - R[aj][1];
+                                        r_ij[2] = rz - R[aj][2];
+
+                                        // Periodic boundary conditions
+                                        if (r_ij[0] > Lx/2){
+                                            r_ij[0] = - Lx + r_ij[0];
+                                        }
+                                        else if (r_ij[0] < -Lx/2){
+                                            r_ij[0] = Lx + r_ij[0];
+                                        }
+                                        if (r_ij[1] > Ly/2){
+                                            r_ij[1] = -Ly + r_ij[1];
+                                        }
+                                        else if (r_ij[1] < -Ly/2){
+                                            r_ij[1] = Ly + r_ij[1];
+                                        }
+                                        if (r_ij[2] > Lz/2){
+                                            r_ij[2] = -Lz + r_ij[2];
+                                        }
+                                        else if (r_ij[2] < -Lz/2){
+                                            r_ij[2] = Lz + r_ij[2];
+                                        }
+
+                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                                        r2i = 1.0/r2;
+                                        r6i = r2i*r2i*r2i;
+                                        r12i = r6i*r6i;
+
+                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+                                        f[1] = f[1] + fij[1];
+                                        f[2] = f[2] + fij[2];
+
+
+                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+                                        force = force + 1;
+
+                                    }
+                                }// end if/else.
+                            }
+                        }
+                    }
+                    F[ai] = f;   // total force in [x,y,z] on particle i
+                    U.push_back(Ui); // total potential energy
                 }
-                else if (r_ij[0] < -Lx/2){
-                    r_ij[0] = Lx + r_ij[0];
-                }
-                if (r_ij[1] > Ly/2){
-                    r_ij[1] = -Ly + r_ij[1];
-                }
-                else if (r_ij[1] < -Ly/2){
-                    r_ij[1] = Ly + r_ij[1];
-                }
-                if (r_ij[2] > Lz/2){
-                    r_ij[2] = -Lz + r_ij[2];
-                }
-                else if (r_ij[2] < -Lz/2){
-                    r_ij[2] = Lz + r_ij[2];
-                }
-
-                r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                r2i = 1.0/r2;
-                r6i = r2i*r2i*r2i;
-                r12i = r6i*r6i;
-
-                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-                f[1] = f[1] + fij[1];
-                f[2] = f[2] + fij[2];
+            }
+        }
+    }
 
 
-                Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
 
-                force = force + 1;
-            } // end if
-        } // end for j
+//    double rx,ry,rz,r2,r2i,r6i,r12i;
+//    //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
 
-        F[i] = f;   // total force in [x,y,z] on particle i
-        U.push_back(Ui); // total potential energy
-    } // end for i
+//    int force = 0;
+//    for (int i = 0; i < N; ++i) {
+//        rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
+//        vector < double > f (3);   //  sums up to total force on i
+//        double Ui = 0; // potential energy
+//        for (int j = 0; j < N; ++j) {
+//            if ( j != i) {
+//                vector < double > r_ij (3);
+//                vector < double > fij (3);
+
+//                r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
+//                r_ij[1] = ry - R[j][1];  // y
+//                r_ij[2] = rz - R[j][2];  // z
+
+
+//                // Periodic boundary conditions
+//                if (r_ij[0] > Lx/2){
+//                    r_ij[0] = - Lx + r_ij[0];
+//                }
+//                else if (r_ij[0] < -Lx/2){
+//                    r_ij[0] = Lx + r_ij[0];
+//                }
+//                if (r_ij[1] > Ly/2){
+//                    r_ij[1] = -Ly + r_ij[1];
+//                }
+//                else if (r_ij[1] < -Ly/2){
+//                    r_ij[1] = Ly + r_ij[1];
+//                }
+//                if (r_ij[2] > Lz/2){
+//                    r_ij[2] = -Lz + r_ij[2];
+//                }
+//                else if (r_ij[2] < -Lz/2){
+//                    r_ij[2] = Lz + r_ij[2];
+//                }
+
+//                r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+//                r2i = 1.0/r2;
+//                r6i = r2i*r2i*r2i;
+//                r12i = r6i*r6i;
+
+//                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+//                fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+//                fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+//                f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+//                f[1] = f[1] + fij[1];
+//                f[2] = f[2] + fij[2];
+
+
+//                Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+//                force = force + 1;
+//            } // end if
+//        } // end for j
+
+//        F[i] = f;   // total force in [x,y,z] on particle i
+//        U.push_back(Ui); // total potential energy
+//    } // end for i
 
 
     //cout << "------Forces on particle i------------" << endl;
