@@ -8,6 +8,7 @@
 #include <random>
 #include <unitconverter.h>
 #include <list>
+#include <algorithm>
 
 using namespace std;
 
@@ -100,6 +101,9 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
         box_index = ix*ny*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
+        if (box_index > 26){
+            cout <<"Tried to access box nr: " << box_index << endl;
+        }
         box_list[box_index].push_back(p);        // put particle p into box number box_index
     }
 
@@ -212,14 +216,12 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     cout << " mean speed z: " << mean_z << " stdev= " << std_dev_z << endl;
     cout  << "---------------------------------------------------------" << endl;
 
-//    ofstream myfile;
-//    myfile.open("state000.txt");
-//    myfile << N << endl;
-//    myfile << "initial_state_fcc_lattice_of_Argon_gass" << " " << 0.0 << endl;
-//    for (int i=0;i<N;++i){
-//        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << endl;
-//    }
-//    myfile.close();
+    for (int p=0; p<N;++p){
+        // get rid of drift:
+        V[p][0] = V[p][0] - mean_x;
+        V[p][2] = V[p][1] - mean_y;
+        V[p][2] = V[p][2] - mean_z;
+    }
 
 }
 
@@ -234,12 +236,12 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
+                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z; // cubic to linear
 
                 for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
                     int ai = *it;  // ai = atom_index in box_list
 
-                    vector < double > f (3) ; // sums up the total force on particle ai.
+                    //vector < double > f (3) ; // sums up the total force on particle ai.
                     rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai in box box_index.
                     double Ui = 0; // sums up the potential energy for particle ai.
 
@@ -263,116 +265,127 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                 // neighbour_index cubic to linear transform:
                                 int neighbour = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
-                                //if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
+                                if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
+
+                                    if (neighbour == box_index){
+                                        auto iterator = it;
+                                        for (auto it2 = ++ iterator; it2 != box_list[neighbour].end(); ++it2){
+
+                                            int i = *it;
+                                            int j = *it2;
+
+                                            vector < double > fij (3);
+                                            vector < double > r_ij (3);
+
+                                            //cout << "Hi there, Im in auto it2" << endl;
+                                            r_ij[0]=  R[i][0] - R[j][0];
+                                            r_ij[1] = R[i][1] - R[j][1];
+                                            r_ij[2] = R[i][2] - R[j][2];
+
+                                            // Periodic boundary conditions
+                                            if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+                                            else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+                                            if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+                                            else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+                                            if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+                                            else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
+
+                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                                            r2i = 1.0/r2;
+                                            r6i = r2i*r2i*r2i;
+                                            r12i = r6i*r6i;
+
+                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+                                            F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
+                                            F[i][1] = F[i][1] + fij[1];
+                                            F[i][2] = F[i][2] + fij[2];
+
+                                            F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle i in x direction.
+                                            F[j][1] = F[j][1] - fij[1];
+                                            F[j][2] = F[j][2] - fij[2];
 
 
-                                if (neighbour == box_index){
-                                    auto iterator = it;
-                                    for (auto it2 = ++ iterator; it2 != box_list[neighbour].end(); ++it2){
-                                        int aj = *it2;
+                                            if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  0.1){
+                                                cout << "ERROR!  same box calculation" << endl;
+                                                cout << j << " tot_force= " << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] << endl;
+                                            }
 
-                                        vector < double > fij (3);
-                                        vector < double > r_ij (3);
+                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
 
-                                        //cout << "Hi there, Im in auto it2" << endl;
-                                        r_ij[0]=  rx - R[aj][0];
-                                        r_ij[1] = ry - R[aj][1];
-                                        r_ij[2] = rz - R[aj][2];
+                                            force = force + 1;
 
-                                        // Periodic boundary conditions
-                                        if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
-                                        else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
-
-                                        if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
-                                        else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
-
-                                        if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
-                                        else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
-
-                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                                        r2i = 1.0/r2;
-                                        r6i = r2i*r2i*r2i;
-                                        r12i = r6i*r6i;
-
-                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-                                        f[1] = f[1] + fij[1];
-                                        f[2] = f[2] + fij[2];
-
-
-                                        if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  0.01){
-                                            cout << "ERROR!  same box calculation" << endl;
-                                            cout << aj << " f_x= " << fij[0] << " f_y= " << fij[1] << " f_z= " << fij[2] << endl;
                                         }
-
-                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-                                        force = force + 1;
-
                                     }
+                                    else { // neighbour != box_index, that is, we are looking at the surrounding boxes!
+                                        for (auto it3 = box_list[neighbour].begin(); it3 != box_list[neighbour].end(); ++it3){
+
+                                            //cout << "Hi there, im in auto it3" << endl;
+
+                                            int i = *it;
+                                            int j = *it3;
+
+                                            vector < double > fij (3);
+                                            vector < double > r_ij (3);
+
+                                            //cout << "Hi there, Im in auto it2" << endl;
+                                            r_ij[0]=  R[i][0] - R[j][0];
+                                            r_ij[1] = R[i][1] - R[j][1];
+                                            r_ij[2] = R[i][2] - R[j][2];
+
+                                            // Periodic boundary conditions
+                                            if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+                                            else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+                                            if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+                                            else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+                                            if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+                                            else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
+
+                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+                                            r2i = 1.0/r2;
+                                            r6i = r2i*r2i*r2i;
+                                            r12i = r6i*r6i;
+
+                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+                                            F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
+                                            F[i][1] = F[i][1] + fij[1];
+                                            F[i][2] = F[i][2] + fij[2];
+
+                                            F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle i in x direction.
+                                            F[j][1] = F[j][1] - fij[1];
+                                            F[j][2] = F[j][2] - fij[2];
+
+                                            //cout << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] << endl;
+
+                                            if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  0.1){
+                                                cout << "ERROR!  neighbour calculation" << endl;
+                                                cout << j << " tot_force= " << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2]<< endl;
+                                            }
+
+
+                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+                                            force = force + 1;
+
+                                        }
+                                    }// end if/else.
                                 }
-                                else { // neighbour != box_index, that is, we are looking at the surrounding boxes!
-                                    for (auto it3 = box_list[neighbour].begin(); it3 != box_list[neighbour].end(); ++it3){
-                                        int aj = *it3;
-
-                                        //cout << "Hi there, im in auto it3" << endl;
-
-                                        vector < double > fij (3);
-                                        vector < double > r_ij (3);
-
-                                        //cout << "Hi there, Im in auto it2" << endl;
-                                        r_ij[0]= rx - R[aj][0];
-                                        r_ij[1] = ry - R[aj][1];
-                                        r_ij[2] = rz - R[aj][2];
-
-                                        // Periodic boundary conditions
-                                        if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
-                                        else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
-
-                                        if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
-                                        else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
-
-                                        if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
-                                        else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
-
-                                        r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                                        r2i = 1.0/r2;
-                                        r6i = r2i*r2i*r2i;
-                                        r12i = r6i*r6i;
-
-                                        fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                                        fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                                        fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                                        f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-                                        f[1] = f[1] + fij[1];
-                                        f[2] = f[2] + fij[2];
-
-                                        //cout << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] << endl;
-
-                                        if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  0.01){
-                                            cout << "ERROR!  neighbour calculation" << endl;
-                                            cout << aj << " f_x= " << fij[0] << " f_y= " << fij[1] << " f_z= " << fij[2] << endl;
-                                        }
-
-
-                                        Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-                                        force = force + 1;
-
-                                    }
-                                }// end if/else.
-                               // }
                             } // if (find() == calcuated_boxes.end())
                         }
                     }
-                    F[ai] = f;   // total force in [x,y,z] on particle i
+                    //F[ai] = f;   // total force in [x,y,z] on particle i
                     U.push_back(Ui); // total potential energy
                 }
-                //calculated_boxes.push_back(box_index);
+                calculated_boxes.push_back(box_index);
             }
         }
     }
@@ -394,7 +407,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Ekin;
 
     double dt = 0.02;
-    int tmax = 20;
+    int tmax = 200;
     double Ek, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -537,11 +550,21 @@ int main(){
 
     vector < list < int > > box_list(N_cells_x*N_cells_y*N_cells_z);
 
+    clock_t time1, time2;
+    time1 = clock();
+
     initialize(V,R,N,Nx,Ny,Nz);
+
+    time1 = clock() - time1;
 
     initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
+    time2 = clock();
     integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    time2 = clock() - time2;
+
+    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
+    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
 
     return 0;
 }
