@@ -15,7 +15,7 @@ double pi = 4*atan(1);
 
 // Check out the constants, do they fit with those in the project text?
 //double b = 5.260;                 // Ångstrøm [Å]
-double b = 18.0;                 // Ångsrøm [Å]
+double b = 20.0;                 // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
@@ -75,7 +75,7 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
         ix = floor(R[p][0]/Lcx);
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
-        box_index = ix*nx*nz + iy*nz + iz;     // cubic to linear transform, (nested lists)
+        box_index = ix*ny*nz + iy*nz + iz;     // cubic to linear transform, (nested lists)
         box_list[box_index].push_back(p);      // put particle p into box number box_index
     }
 
@@ -89,13 +89,17 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
     /* Function that updates the box list :-) - that is, it puts the particle into the box it belongs to:-)
      */
 
+    for(int i = 0; i < box_list.size(); ++i){
+        box_list[i].clear(); // empty the box list!
+    }
+
     int ix,iy,iz,box_index;
     for (int p = 0; p < R.size(); ++p) {
         // Create x,y and z index for particle p.
         ix = floor(R[p][0]/Lcx);
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
-        box_index = ix*nx*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
+        box_index = ix*ny*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
         box_list[box_index].push_back(p);        // put particle p into box number box_index
     }
 
@@ -212,14 +216,14 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     cout << " mean speed z: " << mean_z << " stdev= " << std_dev_z << endl;
     cout  << "---------------------------------------------------------" << endl;
 
-    ofstream myfile;
-    myfile.open("state000.txt");
-    myfile << N << endl;
-    myfile << "initial_state_fcc_lattice_of_Argon_gass" << " " << 0.0 << endl;
-    for (int i=0;i<N;++i){
-        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << endl;
-    }
-    myfile.close();
+//    ofstream myfile;
+//    myfile.open("state000.txt");
+//    myfile << N << endl;
+//    myfile << "initial_state_fcc_lattice_of_Argon_gass" << " " << 0.0 << endl;
+//    for (int i=0;i<N;++i){
+//        myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << 0 << " " << 0 << " " << 0 << " " << 0 << " " << endl;
+//    }
+//    myfile.close();
 
 }
 
@@ -250,52 +254,42 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                 box_y = box_y + iy;
                                 box_z = box_z + iz;
 
-                                vector < double > r_ij (3); // distance between particle ai and aj.
-                                vector < double > fij (3);  // force between particle ai and aj.
 
                                 if (box_x < 0){ box_x = box_x + N_cells_x;}
-                                else if (box_x > N_cells_x){ box_x = box_x - N_cells_x;}
+                                else if (box_x >= N_cells_x){ box_x = box_x - N_cells_x;}
 
                                 if (box_y < 0){ box_y = box_y + N_cells_y; }
-                                else if (box_y > N_cells_y){box_y = box_y - N_cells_y;}
+                                else if (box_y >= N_cells_y){box_y = box_y - N_cells_y;}
 
                                 if (box_z < 0){ box_z = box_z + N_cells_z;}
-                                else if (box_z > N_cells_z){box_z = box_z - N_cells_z;}
+                                else if (box_z >= N_cells_z){box_z = box_z - N_cells_z;}
 
                                 // neighbour_index cubic to linear transform:
-                                int neighbour = box_x*N_cells_x*N_cells_z + box_y*N_cells_z + box_z;
-
+                                int neighbour = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
 
                                 if (neighbour == box_index){
                                     auto iterator = it;
-                                    for (auto it2 = ++ iterator; it2 != box_list[neighbour].end(); ++iterator){
+                                    for (auto it2 = ++ iterator; it2 != box_list[neighbour].end(); ++it2){
                                         int aj = *it2;
 
+                                        vector < double > fij (3);
+                                        vector < double > r_ij (3);
 
-                                        r_ij[0] = rx - R[aj][0];
+                                        //cout << "Hi there, Im in auto it2" << endl;
+                                        r_ij[0]=  rx - R[aj][0];
                                         r_ij[1] = ry - R[aj][1];
                                         r_ij[2] = rz - R[aj][2];
 
                                         // Periodic boundary conditions
-                                        if (r_ij[0] > Lx/2){
-                                            r_ij[0] = - Lx + r_ij[0];
-                                        }
-                                        else if (r_ij[0] < -Lx/2){
-                                            r_ij[0] = Lx + r_ij[0];
-                                        }
-                                        if (r_ij[1] > Ly/2){
-                                            r_ij[1] = -Ly + r_ij[1];
-                                        }
-                                        else if (r_ij[1] < -Ly/2){
-                                            r_ij[1] = Ly + r_ij[1];
-                                        }
-                                        if (r_ij[2] > Lz/2){
-                                            r_ij[2] = -Lz + r_ij[2];
-                                        }
-                                        else if (r_ij[2] < -Lz/2){
-                                            r_ij[2] = Lz + r_ij[2];
-                                        }
+                                        if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+                                        else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+                                        if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+                                        else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+                                        if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+                                        else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
 
                                         r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
                                         r2i = 1.0/r2;
@@ -315,37 +309,35 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                                         force = force + 1;
 
-                                }
+                                    }
                                 }
                                 else { // neighbour != box_index, that is, we are looking at the surrounding boxes!
-                                    auto iterator = it;
-                                    for (auto it2 = iterator; it2 != box_list[neighbour].end(); ++iterator){
-                                        int aj = *it2;
+                                    for (auto it3 = box_list[neighbour].begin(); it3 != box_list[neighbour].end(); ++it3){
+                                        int aj = *it3;
 
+                                        //cout << "Hi there, im in auto it3" << endl;
 
-                                        r_ij[0] = rx - R[aj][0];
+                                        vector < double > fij (3);
+                                        vector < double > r_ij {
+                                            rx - R[aj][0],
+                                            ry - R[aj][1],
+                                            rz - R[aj][2]
+                                        };
+
+                                        //cout << "Hi there, Im in auto it2" << endl;
+                                        r_ij[0]= rx - R[aj][0];
                                         r_ij[1] = ry - R[aj][1];
                                         r_ij[2] = rz - R[aj][2];
 
                                         // Periodic boundary conditions
-                                        if (r_ij[0] > Lx/2){
-                                            r_ij[0] = - Lx + r_ij[0];
-                                        }
-                                        else if (r_ij[0] < -Lx/2){
-                                            r_ij[0] = Lx + r_ij[0];
-                                        }
-                                        if (r_ij[1] > Ly/2){
-                                            r_ij[1] = -Ly + r_ij[1];
-                                        }
-                                        else if (r_ij[1] < -Ly/2){
-                                            r_ij[1] = Ly + r_ij[1];
-                                        }
-                                        if (r_ij[2] > Lz/2){
-                                            r_ij[2] = -Lz + r_ij[2];
-                                        }
-                                        else if (r_ij[2] < -Lz/2){
-                                            r_ij[2] = Lz + r_ij[2];
-                                        }
+                                        if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+                                        else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+                                        if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+                                        else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+                                        if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+                                        else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
 
                                         r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
                                         r2i = 1.0/r2;
@@ -458,14 +450,14 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
 
-    vector < vector < double > > F (N, vector < double > (3,0)); // Vector that holds the forces on particle i.
-    vector < double >  U (N,0); // Vector that holds the potential energy for particle i.
+    vector < vector < double > > F (R.size(), vector < double > (3,0)); // Vector that holds the forces on particle i.
+    vector < double >  U (R.size(),0); // Vector that holds the potential energy for particle i.
     vector < double > E_system;
     vector < double > Temperature;
     vector < double > Ekin;
 
     double dt = 0.02;
-    int tmax = 200;
+    int tmax = 61;
     double Ek, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -473,13 +465,23 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
     vector < double > Time_vec ;
 
-    for (int t=1;t<tmax;++t){
+    for (int t=0;t<tmax;++t){
         char filename [20];
         sprintf(filename, "state%03d.txt", t);
         ofstream myfile;
         myfile.open(filename);
         myfile << N << endl;
         myfile << filename << "time: " << t*dt << endl;
+        for (int boxnr = 0; boxnr<box_list.size(); ++boxnr){
+            for (auto it=box_list[boxnr].begin(); it != box_list[boxnr].end(); ++it){
+                int index = *it;
+                if (floor(index) != index){
+                    cout << "somethings wrong!!!" << boxnr << " " << index << endl;
+                }
+                myfile << "Ar" << " " << R[index][0] << " " << R[index][1] << " " << R[index][2] << " " << V[index][0] << " " << V[index][1] << " " << V[index][2] << " " <<  F[index][0] << " " << F[index][1] << " " << F[index][2] << " " << boxnr << endl;
+            }
+        }
+        myfile.close();
         E_tot_system = 0;
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
@@ -491,26 +493,14 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             R[i][2] = R[i][2] + V[i][2]*dt;
 
             // Adjust positions after periodic boundary conditions
-            if (R[i][0] > Lx){
-                R[i][0] = R[i][0] - Lx;
-            }
-            else if (R[i][0] < 0){
-                R[i][0] = R[i][0] + Lx;
-            }
+            if (R[i][0] > Lx){R[i][0] = R[i][0] - Lx;}
+            else if (R[i][0] < 0){R[i][0] = R[i][0] + Lx;}
 
-            if (R[i][1] > Ly){
-                R[i][1] = R[i][1] - Ly;
-            }
-            else if (R[i][1] < 0){
-                R[i][1] = R[i][1] + Ly;
-            }
+            if (R[i][1] > Ly){R[i][1] = R[i][1] - Ly;}
+            else if (R[i][1] < 0){R[i][1] = R[i][1] + Ly;}
 
-            if (R[i][2] > Lz){
-                R[i][2] = R[i][2] - Lz;
-            }
-            else if (R[i][2] < 0){
-                R[i][2] = R[i][2] + Lz;
-            }
+            if (R[i][2] > Lz){R[i][2] = R[i][2] - Lz;}
+            else if (R[i][2] < 0){R[i][2] = R[i][2] + Lz;}
         }
 
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
@@ -526,9 +516,10 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             Ek += E_kin;          // total kinetic energy
             E_tot_system += E_tot;
             // Write to file:
-            myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
+            //myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
         }
-        myfile.close();
+
+
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(E_tot_system);          // Energy of the system.
         Ekin.push_back(Ek);
@@ -568,7 +559,6 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
 
 int main(){
-
 
     cout << "scaled mass:   " << m << endl;
     cout << "scaled time:   " << 0.02 << endl;
@@ -619,3 +609,34 @@ int main(){
     return 0;
 }
 
+//r_ij[0] = rx - R[aj][0];
+//r_ij[1] = ry - R[aj][1];
+//r_ij[2] = rz - R[aj][2];
+
+// Periodic boundary conditions
+//if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+//else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+//if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+//else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+//if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+//else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
+
+//r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+//r2i = 1.0/r2;
+//r6i = r2i*r2i*r2i;
+//r12i = r6i*r6i;
+
+//fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+//fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+//fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+//f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
+//f[1] = f[1] + fij[1];
+//f[2] = f[2] + fij[2];
+
+
+//Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+//force = force + 1;
