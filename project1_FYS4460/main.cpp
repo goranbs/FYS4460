@@ -234,7 +234,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                int box_index = box_x*N_cells_x*N_cells_y + box_y*N_cells_z + box_z;
+                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
                 for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
                     int ai = *it;  // ai = atom_index in box_list
