@@ -9,14 +9,19 @@
 #include <unitconverter.h>
 #include <list>
 #include <algorithm>
+#include "initialstate.h"
 
 using namespace std;
 
 double pi = 4*atan(1);
 
+void write_to_file(vector<vector<double> > R, vector<vector<double> > V, vector<vector<double> > F, vector<list<int> > box_list, string filename, int N, double t);
+
+void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
+
 // Check out the constants, do they fit with those in the project text?
-//double b = 5.260;                 // Ångstrøm [Å]
-double b = 20.0;                 // Ångsrøm [Å]
+double b = 5.260;                 // Ångstrøm [Å]
+//double b = 20.0;                 // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
@@ -77,6 +82,7 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
         box_index = ix*ny*nz + iy*nz + iz;     // cubic to linear transform, (nested lists)
+        cout << box_index << endl;
         box_list[box_index].push_back(p);      // put particle p into box number box_index
     }
 
@@ -225,10 +231,10 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int &N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list){
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      */
-        double rx,ry,rz,r2,r2i,r6i,r12i;
+/*        double rx,ry,rz,r2,r2i,r6i,r12i;
         //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
 
         double totU = 0;
@@ -292,10 +298,10 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         } // end for i
 
 } // end Lennard-Jones
-
+*/
 /*******************************************************************************************************************
  * forces with boxes - currently not working :-)
- *
+ */
 
     vector <int> calculated_boxes;
     vector <int> particle;
@@ -454,18 +460,16 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                             } // if (find() == calcuated_boxes.end())
                         }
                     }
-                    //F[ai] = f;   // total force in [x,y,z] on particle i
-                    U.push_back(Ui); // total potential energy
+                    U[ai] = Ui;
                 }
                 calculated_boxes.push_back(box_index);
             }
         }
     }
 } // end Lennard-Jones
-*/
 
 
-void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int &N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
+void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -492,20 +496,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     for (int t=0;t<tmax;++t){
         char filename [20];
         sprintf(filename, "state%04d.txt", t);
-        ofstream myfile;
-        myfile.open(filename);
-        myfile << N << endl;
-        myfile << filename << "time: " << t*dt << endl;
-        for (int boxnr = 0; boxnr<box_list.size(); ++boxnr){
-            for (auto it=box_list[boxnr].begin(); it != box_list[boxnr].end(); ++it){
-                int index = *it;
-                if (floor(index) != index){
-                    cout << "somethings wrong!!!" << boxnr << " " << index << endl;
-                }
-                myfile << "Ar" << " " << R[index][0] << " " << R[index][1] << " " << R[index][2] << " " << V[index][0] << " " << V[index][1] << " " << V[index][2] << " " <<  F[index][0] << " " << F[index][1] << " " << F[index][2] << " " << boxnr << endl;
-            }
-        }
-        myfile.close();
+
+        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0); // write to file
+
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -552,7 +545,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         Epot.push_back(Ep);
         double tempi = 2*Ek/(3.0*N);
         Temperature.push_back(tempi);     // Temperature
-        cout << "t= " << t << " E= " << E_tot_system << " Ekin= " << Ekin[t] << " U= " << Epot[t] << "T= " << tempi*T_0 << endl;
+        cout << "t= " << t << " E= " << E_tot_system << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi*T_0 << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
 
@@ -622,6 +615,59 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
 //}
 
+void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,int N_cells_z, vector < list < int > > box_list){
+
+    vector < vector < double > > R (2,vector < double > (3,0));
+    vector < vector < double > > V (2,vector < double > (3,0));
+
+    InitialState twoparts;
+    twoparts.two_particles(R,V,Lx,Ly,Lz);
+
+    double Lcx = Lx/N_cells_x;
+    double Lcy = Ly/N_cells_y;
+    double Lcz = Lz/N_cells_z;
+    // endsure that the total length of the cells equals the length dimentions of the box.
+    N_cells_x = Lx/Lcx;
+    N_cells_y = Ly/Lcy;
+    N_cells_z = Lz/Lcz;
+    Lcx = Lx/N_cells_x;
+    Lcy = Ly/N_cells_y;
+    Lcz = Lz/N_cells_z;
+
+    initialize_box_list(Lcx,Lcy,Lcz,3,3,3,R,box_list);
+
+    clock_t time3;
+    time3 = clock();
+    integrator(V,R,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    time3 = clock() - time3;
+
+    cout << "two particles" << endl;
+    cout << "Integrator used time= " << float(time3)/CLOCKS_PER_SEC << " seconds" << endl;
+
+}
+
+
+void write_to_file(vector < vector < double > > R, vector < vector < double > > V, vector < vector < double > > F, vector < list < int > > box_list,string filename, int N, double t){
+
+    ofstream myfile;
+    myfile.open(filename);
+    myfile << N << endl;
+    myfile << filename << "time: " << t << endl;
+    for (int boxnr = 0; boxnr < box_list.size(); ++boxnr){
+        for (auto it = box_list[boxnr].begin(); it != box_list[boxnr].end(); ++it){
+            int index = *it;
+            if (floor(index) != index){
+                cout << "somethings wrong!!!" << boxnr << " " << index << endl;
+            }
+            if (index < 0){
+                cout << "index=" << index << " boxnumber=" << endl;
+            }
+            myfile << "Ar" << " " << R[index][0] << " " << R[index][1] << " " << R[index][2] << " " << V[index][0] << " " << V[index][1] << " " << V[index][2] << " " <<  F[index][0] << " " << F[index][1] << " " << F[index][2] << " " << boxnr << endl;
+        }
+    }
+    myfile.close();
+}
+
 int main(){
 
     cout << "scaled mass:   " << m << endl;
@@ -664,21 +710,33 @@ int main(){
 
     vector < list < int > > box_list(N_cells_x*N_cells_y*N_cells_z);
 
-    clock_t time1, time2;
-    time1 = clock();
+    /*******************************************************************************************
+     *                 unittesting with only two particles
+     */
 
-    initialize(V,R,N,Nx,Ny,Nz);
+    test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
 
-    time1 = clock() - time1;
+    /*******************************************************************************************
+     *  using initialize to generate intial state
+     */
 
-    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
-    time2 = clock();
-    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
-    time2 = clock() - time2;
 
-    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
-    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
+//    clock_t time1, time2;
+//    time1 = clock();
+
+//    initialize(V,R,N,Nx,Ny,Nz);
+
+//    time1 = clock() - time1;
+
+//    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
+
+//    time2 = clock();
+//    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+//    time2 = clock() - time2;
+
+//    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
+//    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
 
     return 0;
 }
