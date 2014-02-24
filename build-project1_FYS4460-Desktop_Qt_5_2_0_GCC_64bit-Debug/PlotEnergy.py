@@ -8,9 +8,9 @@ is conserved.
 
 import numpy as np
 
-num_files = 199
+num_files = 399
 
-filename = 'state%03g.txt' % 0      # filename = 'state000.txt' initial file
+filename = 'state%04g.txt' % 0      # filename = 'state000.txt' initial file
 file = open(filename,'r')
 
 N = int(file.readline())            # number of atoms
@@ -23,7 +23,7 @@ time.append(t0) # first time value
 E_sys.append(0) # first value
 for i in range(num_files-1):
     i = i+1
-    filename = 'state%03g.txt' % i      # filename = 'state000.txt'
+    filename = 'state%04g.txt' % i      # filename = 'state000.txt'
     file = open(filename,'r')
     
     N_atoms = int(file.readline())            # number of atoms
@@ -35,7 +35,7 @@ for i in range(num_files-1):
     j = 0
     for line_j in file:
         line = line_j.split()           # split line on whitespace
-        E_tot += float(line[10])
+        E_tot += float(line[12])
         j += 1
         
     if j == N_atoms:

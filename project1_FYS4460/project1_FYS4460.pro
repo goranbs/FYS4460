@@ -6,11 +6,13 @@ CONFIG -= qt
 SOURCES += main.cpp \
     integrator.cpp \
     unitconverter.cpp \
-    cell.cpp
+    cell.cpp \
+    initialstate.cpp
 
 HEADERS += \
     unitconverter.h \
-    cell.h
+    cell.h \
+    initialstate.h
 
 release {
     QMAKE_CXXFLAGS_RELEASE -= -O2
