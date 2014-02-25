@@ -267,20 +267,18 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z; // cubic to linear
+                // cubic to linear transform:
+                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
                 for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
-                    int ai = *it;  // ai = atom_index in box_list
-
-                    double Ui = 0; // sums up the potential energy for particle ai.
 
                     for (int ix=-1; ix<=1; ++ix){ // box number; box_index -1,0,1 in x,y and z direction.
                         for (int iy=-1; iy<=1; ++iy){
                             for (int iz=-1; iz<=1; ++iz){
+                                //neighbour boxes:
                                 box_x = box_x + ix;
                                 box_y = box_y + iy;
                                 box_z = box_z + iz;
-
 
                                 if (box_x < 0){ box_x = box_x + N_cells_x;}
                                 else if (box_x >= N_cells_x){ box_x = box_x - N_cells_x;}
@@ -298,8 +296,8 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                 //if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){cout << neighbour << " " << box_index << endl;}
                                 if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
 
-
                                     if (neighbour == box_index){
+                                        // inside the same box
                                         auto iterator = it;
                                         for (auto it2 = ++iterator; it2 != box_list[neighbour].end(); ++it2){
 
@@ -309,8 +307,11 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                             if (i == j){ cout << "i == j, neighbour calc." << endl;}
                                             if (i==j) continue;
 
-                                            Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
-
+                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                                            double f = F[i][0]*F[i][0] + F[i][1]*F[i][1] + F[i][2]*F[i][2];
+                                            if (f > 100) {
+                                                cout << "Same box calculation: " << f << endl;
+                                            }
 
                                         }
                                     }
@@ -320,10 +321,13 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                             int i = *it;
                                             int j = *it3;
 
-
                                             if (i == j){ cout << "i == j, neighbour calc." << endl;}
 
-                                            Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                                            double f = F[i][0]*F[i][0] + F[i][1]*F[i][1] + F[i][2]*F[i][2];
+                                            if (f > 100) {
+                                                cout << "neighbour box calculation: " << f << endl;
+                                            }
 
                                         }
                                     }// end if/else.
@@ -331,7 +335,6 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                             } // if (find() == calcuated_boxes.end())
                         }
                     }
-                    U[ai] = Ui;
                 }
                 calculated_boxes.push_back(box_index);
             }
@@ -355,7 +358,7 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
     r_ij[1] = R[i][1] - R[j][1];
     r_ij[2] = R[i][2] - R[j][2];
 
-    // Periodic boundary conditions
+    // Periodic boundary conditions - Minimum Image Convention:
     if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
     else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
 
@@ -416,8 +419,6 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         char filename [20];
         sprintf(filename, "state%04d.txt", t);
 
-        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0); // write to file
-
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -450,6 +451,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             F[p][2] = 0;
         }
         Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);              // calculate the force at time (t+dt) using the new positions.
+        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0); // write to file
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -639,12 +641,12 @@ int main(){
      *  using initialize to generate intial state
      */
 
-//    cout << "scaled mass:   " << m << endl;
-//    cout << "scaled time:   " << 0.02 << endl;
-//    cout << "scaled length: " << length << endl;
-//    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
-//    cout << "scaled Energy: " << eps/E << endl;
-//    cout << "scaled Temp.:  " << T_0 << endl;
+    cout << "scaled mass:   " << m << endl;
+    cout << "scaled time:   " << 0.02 << endl;
+    cout << "scaled length: " << length << endl;
+    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
+    cout << "scaled Energy: " << eps/E << endl;
+    cout << "scaled Temp.:  " << T_0 << endl;
 
 //    clock_t time1, time2;
 //    time1 = clock();
