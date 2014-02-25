@@ -20,10 +20,10 @@ void InitialState::two_particles(vector < vector < double > > &R, vector < vecto
     R[1][2] = 0;
 
 
-    V[0][0] = -1.0;
+    V[0][0] = 0.5;
     V[0][1] = 0;
     V[0][2] = 0;
-    V[1][0] = 1.0;
+    V[1][0] = -0.5;
     V[1][1] = 0;
     V[1][2] = 0;
 

@@ -15,10 +15,20 @@ using namespace std;
 
 double pi = 4*atan(1);
 
+/**********************************************************************************************************
+ *             FUNCTION DECLARATIONS
+ * ********************************************************************************************************
+ */
 void write_to_file(vector<vector<double> > R, vector<vector<double> > V, vector<vector<double> > F, vector<list<int> > box_list, string filename, int N, double t);
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
 
+double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz);
+
+/**********************************************************************************************************
+ *             CONSTANTS
+ **********************************************************************************************************
+ */
 // Check out the constants, do they fit with those in the project text?
 double b = 5.260;                 // Ångstrøm [Å]
 //double b = 20.0;                 // Ångsrøm [Å]
@@ -27,10 +37,9 @@ double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.1*1.0303;          // Energy constant [eV]
 double Temp = 100.0;              // Kelvin, initial temperature
 double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
-/********************************************************************************
+/**********************************************************************************************************
  * Conversion factors, so that we get out units that we would like to use
  */
-
 UnitConverter leng;
 double length = leng.from_aangstrom(b);  // unitless length
 
@@ -112,8 +121,6 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
         }
         box_list[box_index].push_back(p);        // put particle p into box number box_index
     }
-
-
 }
 
 /********************************************************************************
@@ -225,7 +232,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     for (int p=0; p<N;++p){
         // get rid of drift:
         V[p][0] = V[p][0] - mean_x;
-        V[p][2] = V[p][1] - mean_y;
+        V[p][1] = V[p][1] - mean_y;
         V[p][2] = V[p][2] - mean_z;
     }
 
@@ -233,68 +240,20 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
-     */
-/*        double rx,ry,rz,r2,r2i,r6i,r12i;
-        //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
+     * One box-calculation - calulating the contribution from every particle in the system.
+     *
 
-        double totU = 0;
-        int force = 0;
-        for (int i = 0; i < N; ++i) {
-            rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
-            vector < double > f (3);   //  sums up to total force on i
+        for (int i = 0; i < R.size(); ++i) {
             double Ui = 0; // potential energy
-            for (int j = 0; j < N; ++j) {
+            for (int j = i; j < R.size(); ++j) {
                 if ( j != i) {
-                    vector < double > r_ij (3);
-                    vector < double > fij (3);
 
-                    r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
-                    r_ij[1] = ry - R[j][1];  // y
-                    r_ij[2] = rz - R[j][2];  // z
+                    Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
 
-
-                    // Periodic boundary conditions
-                    if (r_ij[0] > Lx/2){
-                        r_ij[0] = - Lx + r_ij[0];
-                    }
-                    else if (r_ij[0] < -Lx/2){
-                        r_ij[0] = Lx + r_ij[0];
-                    }
-                    if (r_ij[1] > Ly/2){
-                        r_ij[1] = -Ly + r_ij[1];
-                    }
-                    else if (r_ij[1] < -Ly/2){
-                        r_ij[1] = Ly + r_ij[1];
-                    }
-                    if (r_ij[2] > Lz/2){
-                        r_ij[2] = -Lz + r_ij[2];
-                    }
-                    else if (r_ij[2] < -Lz/2){
-                        r_ij[2] = Lz + r_ij[2];
-                    }
-
-                    r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                    r2i = 1.0/r2;
-                    r6i = r2i*r2i*r2i;
-                    r12i = r6i*r6i;
-
-                    fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                    fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                    fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                    f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-                    f[1] = f[1] + fij[1];
-                    f[2] = f[2] + fij[2];
-
-
-                    Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-                    force = force + 1;
                 } // end if
             } // end for j
 
-            F[i] = f;   // total force in [x,y,z] on particle i
-            U[i] = Ui;
+            U[i] = Ui; // Total potential energy of particle i.
         } // end for i
 
 } // end Lennard-Jones
@@ -304,8 +263,6 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
  */
 
     vector <int> calculated_boxes;
-    vector <int> particle;
-    double rx,ry,rz,r2,r2i,r6i,r12i;
     for (int box_x = 0; box_x < N_cells_x; ++box_x){
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
@@ -315,8 +272,6 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                 for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
                     int ai = *it;  // ai = atom_index in box_list
 
-                    //vector < double > f (3) ; // sums up the total force on particle ai.
-                    rx = R[ai][0]; ry = R[ai][1]; rz = R[ai][2]; // x,y,z position of atom ai in box box_index.
                     double Ui = 0; // sums up the potential energy for particle ai.
 
                     for (int ix=-1; ix<=1; ++ix){ // box number; box_index -1,0,1 in x,y and z direction.
@@ -341,8 +296,8 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                                 //if box_index has been used before, then skipp it!
                                 //if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){cout << neighbour << " " << box_index << endl;}
-                                //if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
-                                {
+                                if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
+
 
                                     if (neighbour == box_index){
                                         auto iterator = it;
@@ -354,48 +309,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                             if (i == j){ cout << "i == j, neighbour calc." << endl;}
                                             if (i==j) continue;
 
-                                            vector < double > fij (3);
-                                            vector < double > r_ij (3);
-
-                                            //cout << "Hi there, Im in auto it2" << endl;
-                                            r_ij[0]=  R[i][0] - R[j][0];
-                                            r_ij[1] = R[i][1] - R[j][1];
-                                            r_ij[2] = R[i][2] - R[j][2];
-
-                                            // Periodic boundary conditions
-                                            if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
-                                            else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
-
-                                            if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
-                                            else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
-
-                                            if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
-                                            else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
-
-                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                                            r2i = 1.0/r2;
-                                            r6i = r2i*r2i*r2i;
-                                            r12i = r6i*r6i;
-
-                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                                            F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
-                                            F[i][1] = F[i][1] + fij[1];
-                                            F[i][2] = F[i][2] + fij[2];
-
-                                            //F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle j in x direction.
-                                            //F[j][1] = F[j][1] - fij[1];
-                                            //F[j][2] = F[j][2] - fij[2];
-
-
-                                            if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  10.0){
-                                                cout << "ERROR!  same box calculation" << endl;
-                                                cout << "i: " << i << " j: " << j << " tot_force= " << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] << endl;
-                                            }
-
-                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+                                            Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
 
 
                                         }
@@ -409,50 +323,7 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                                             if (i == j){ cout << "i == j, neighbour calc." << endl;}
 
-                                            vector < double > fij (3);
-                                            vector < double > r_ij (3);
-
-                                            //cout << "Hi there, Im in auto it2" << endl;
-                                            r_ij[0]=  R[i][0] - R[j][0];
-                                            r_ij[1] = R[i][1] - R[j][1];
-                                            r_ij[2] = R[i][2] - R[j][2];
-
-                                            // Periodic boundary conditions
-                                            if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
-                                            else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
-
-                                            if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
-                                            else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
-
-                                            if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
-                                            else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
-
-                                            r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-                                            r2i = 1.0/r2;
-                                            r6i = r2i*r2i*r2i;
-                                            r12i = r6i*r6i;
-
-                                            fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-                                            fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-                                            fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-                                            F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
-                                            F[i][1] = F[i][1] + fij[1];
-                                            F[i][2] = F[i][2] + fij[2];
-
-                                            //F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle j in x direction.
-                                            //F[j][1] = F[j][1] - fij[1];
-                                            //F[j][2] = F[j][2] - fij[2];
-
-                                            //cout << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] << endl;
-
-                                            if (fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2] >  10.0){
-                                                cout << "ERROR!  neighbour calculation" << endl;
-                                                cout << "i: " << i << " j: " << j << " tot_force= " << fij[0]*fij[0] + fij[1]*fij[1] + fij[2]*fij[2]<< endl;
-                                            }
-
-
-                                            Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
+                                            Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
 
                                         }
                                     }// end if/else.
@@ -467,6 +338,54 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         }
     }
 } // end Lennard-Jones
+
+
+
+double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz){
+    /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
+     * The function calculate_forces returns the potential energy for particle i felt from particle j.
+     * The total potential energy for particle i is then the sum of potentials from all other particles.
+     */
+
+    double r2,r2i,r6i,r12i,Ui;
+    vector < double > fij (3);
+    vector < double > r_ij (3);
+
+    r_ij[0]=  R[i][0] - R[j][0];
+    r_ij[1] = R[i][1] - R[j][1];
+    r_ij[2] = R[i][2] - R[j][2];
+
+    // Periodic boundary conditions
+    if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
+    else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
+
+    if (r_ij[1] > Ly/2){r_ij[1] = -Ly + r_ij[1];}
+    else if (r_ij[1] < -Ly/2){r_ij[1] = Ly + r_ij[1];}
+
+    if (r_ij[2] > Lz/2){r_ij[2] = -Lz + r_ij[2];}
+    else if (r_ij[2] < -Lz/2){r_ij[2] = Lz + r_ij[2];}
+
+    r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
+    r2i = 1.0/r2;
+    r6i = r2i*r2i*r2i;
+    r12i = r6i*r6i;
+
+    fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
+    fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
+    fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
+
+    F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
+    F[i][1] = F[i][1] + fij[1];
+    F[i][2] = F[i][2] + fij[2];
+
+    F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle j in x direction.
+    F[j][1] = F[j][1] - fij[1];
+    F[j][2] = F[j][2] - fij[2];
+
+    Ui = 4*(r12i - r6i); // sum up the potential energy for particle i.
+
+    return Ui;
+}
 
 
 void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
@@ -485,7 +404,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 400;
+    int tmax = 10000;
     double Ek, Ep, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -523,13 +442,20 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         E_tot_system = 0;
         Ek = 0;
         Ep = 0;
+
+        for (int p = 0; p < R.size(); ++p) {
+            // clear the force matrix:
+            F[p][0] = 0;
+            F[p][1] = 0;
+            F[p][2] = 0;
+        }
         Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);              // calculate the force at time (t+dt) using the new positions.
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
-            V[i][1] = V[i][2] + F[i][2]*dt/(2*m);
+            V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
 
-            E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][0]*V[i][0] + V[i][0]*V[i][0]);
+            E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]);
             E_tot = E_kin + U[i]; // total energy for particle i
             Ek += E_kin;          // total kinetic energy
             Ep += U[i];
@@ -550,10 +476,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     }
 
     // Write temperatures to file temperatures.txt
-    char tempr [20];
-    sprintf(tempr,"temperatures.txt");
-    ofstream ofile;
-    ofile.open(tempr);
+    ofstream ofile("temperatures.txt");
     ofile << "Temperature of system as a function of time" << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin]" << endl;
     for (int t = 0; t < tmax; ++t) {
@@ -648,6 +571,9 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
 
 void write_to_file(vector < vector < double > > R, vector < vector < double > > V, vector < vector < double > > F, vector < list < int > > box_list,string filename, int N, double t){
+    /* Writes positions R[i], velocities V[i] and forcec F[i] to file where i denotest particle i,
+     * to file filename
+     */
 
     ofstream myfile;
     myfile.open(filename);
@@ -669,13 +595,6 @@ void write_to_file(vector < vector < double > > R, vector < vector < double > > 
 }
 
 int main(){
-
-    cout << "scaled mass:   " << m << endl;
-    cout << "scaled time:   " << 0.02 << endl;
-    cout << "scaled length: " << length << endl;
-    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
-    cout << "scaled Energy: " << eps/E << endl;
-    cout << "scaled Temp.:  " << T_0 << endl;
 
     // create a vector within a vector, using including the <vector> library.
     vector < vector < double > > R; // positions
@@ -720,7 +639,12 @@ int main(){
      *  using initialize to generate intial state
      */
 
-
+//    cout << "scaled mass:   " << m << endl;
+//    cout << "scaled time:   " << 0.02 << endl;
+//    cout << "scaled length: " << length << endl;
+//    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
+//    cout << "scaled Energy: " << eps/E << endl;
+//    cout << "scaled Temp.:  " << T_0 << endl;
 
 //    clock_t time1, time2;
 //    time1 = clock();
@@ -740,75 +664,3 @@ int main(){
 
     return 0;
 }
-
-
-//*******************************************************************************************************************
-// Forces without boxes - working :-)
-//*******************************************************************************************************************
-//    double rx,ry,rz,r2,r2i,r6i,r12i;
-//    //vector < vector < vector < double > > > mirror (N, vector < vector < double > > (26, vector < double > (3,0)));
-
-//    int force = 0;
-//    for (int i = 0; i < N; ++i) {
-//        rx = R[i][0]; ry = R[i][1]; rz = R[i][2];
-//        vector < double > f (3);   //  sums up to total force on i
-//        double Ui = 0; // potential energy
-//        for (int j = 0; j < N; ++j) {
-//            if ( j != i) {
-//                vector < double > r_ij (3);
-//                vector < double > fij (3);
-
-//                r_ij[0] = rx - R[j][0];  // x distance between particle i and j.
-//                r_ij[1] = ry - R[j][1];  // y
-//                r_ij[2] = rz - R[j][2];  // z
-
-
-//                // Periodic boundary conditions
-//                if (r_ij[0] > Lx/2){
-//                    r_ij[0] = - Lx + r_ij[0];
-//                }
-//                else if (r_ij[0] < -Lx/2){
-//                    r_ij[0] = Lx + r_ij[0];
-//                }
-//                if (r_ij[1] > Ly/2){
-//                    r_ij[1] = -Ly + r_ij[1];
-//                }
-//                else if (r_ij[1] < -Ly/2){
-//                    r_ij[1] = Ly + r_ij[1];
-//                }
-//                if (r_ij[2] > Lz/2){
-//                    r_ij[2] = -Lz + r_ij[2];
-//                }
-//                else if (r_ij[2] < -Lz/2){
-//                    r_ij[2] = Lz + r_ij[2];
-//                }
-
-//                r2 = r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2];
-//                r2i = 1.0/r2;
-//                r6i = r2i*r2i*r2i;
-//                r12i = r6i*r6i;
-
-//                fij[0] = 24*(2*r12i - r6i)*r2i*r_ij[0];  // force from j on i.
-//                fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
-//                fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
-
-//                f[0] = f[0] + fij[0]; // adding up the forces on particle i in x direction.
-//                f[1] = f[1] + fij[1];
-//                f[2] = f[2] + fij[2];
-
-
-//                Ui = Ui + 4*(r12i - r6i); // sum up the potential energy for particle i.
-
-//                force = force + 1;
-//            } // end if
-//        } // end for j
-
-//        F[i] = f;   // total force in [x,y,z] on particle i
-//        U.push_back(Ui); // total potential energy
-//    } // end for i
-
-
-    //cout << "------Forces on particle i------------" << endl;
-//    for (int i = 0; i < N; ++i) {
-//        cout << i << " " << F[i][0] << " "  << F[i][1] << " " << F[i][2] << endl;
-//    }
