@@ -91,7 +91,6 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
         box_index = ix*ny*nz + iy*nz + iz;     // cubic to linear transform, (nested lists)
-        cout << box_index << endl;
         box_list[box_index].push_back(p);      // put particle p into box number box_index
     }
 
@@ -263,16 +262,20 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
  */
 
     vector <int> calculated_boxes;
+    vector <int> n_calculated_neighbours;
     for (int box_x = 0; box_x < N_cells_x; ++box_x){
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                // cubic to linear transform:
+                // cubic to linear index transform:
                 int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
+                // for every particle in box_list[box_index]:
+
+                int n_neighbour = 0;
 
                 for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
-
-                    for (int ix=-1; ix<=1; ++ix){ // box number; box_index -1,0,1 in x,y and z direction.
+                    // box number; box_index -1,0,1 in x,y and z direction:
+                    for (int ix=-1; ix<=1; ++ix){
                         for (int iy=-1; iy<=1; ++iy){
                             for (int iz=-1; iz<=1; ++iz){
                                 //neighbour boxes:
@@ -292,54 +295,41 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                 // neighbour_index cubic to linear transform:
                                 int neighbour = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
-                                //if box_index has been used before, then skipp it!
-                                //if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){cout << neighbour << " " << box_index << endl;}
+                               // if box index has been used before:
                                 if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
+                                    // then we have not calculated the forces from this box, and we may proceed:
 
                                     if (neighbour == box_index){
-                                        // inside the same box
+                                        // Same box calculation
                                         auto iterator = it;
-                                        for (auto it2 = ++iterator; it2 != box_list[neighbour].end(); ++it2){
-
+                                        for (auto it2 = ++iterator; it2 != box_list[box_index].end(); ++it2){
                                             int i = *it;
                                             int j = *it2;
 
-                                            if (i == j){ cout << "i == j, neighbour calc." << endl;}
-                                            if (i==j) continue;
+                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                                        }
+                                    }
+                                    else {
+                                        // neighbour box calculation
+                                        for (auto it2 = box_list[neighbour].begin(); it2 != box_list[neighbour].end(); ++it2){
+                                            int i = *it;
+                                            int j = *it2;
 
                                             U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
-                                            double f = F[i][0]*F[i][0] + F[i][1]*F[i][1] + F[i][2]*F[i][2];
-                                            if (f > 100) {
-                                                cout << "Same box calculation: " << f << endl;
-                                            }
 
                                         }
                                     }
-                                    else { // neighbour != box_index, that is, we are looking at the surrounding boxes!
-                                        for (auto it3 = box_list[neighbour].begin(); it3 != box_list[neighbour].end(); ++it3){
-
-                                            int i = *it;
-                                            int j = *it3;
-
-                                            if (i == j){ cout << "i == j, neighbour calc." << endl;}
-
-                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
-                                            double f = F[i][0]*F[i][0] + F[i][1]*F[i][1] + F[i][2]*F[i][2];
-                                            if (f > 100) {
-                                                cout << "neighbour box calculation: " << f << endl;
-                                            }
-
-                                        }
-                                    }// end if/else.
+                                    n_neighbour += 1;
                                 }
-                            } // if (find() == calcuated_boxes.end())
-                        }
-                    }
-                }
+                            } //                 (z)
+                        }  //                    (y)
+                    } // for every neighbour box (x)
+                } // every particle in box
+                n_calculated_neighbours.push_back(n_neighbour);
                 calculated_boxes.push_back(box_index);
-            }
-        }
-    }
+            } //             (z)
+        } //                 (y)
+    } // every box in system (x)
 } // end Lennard-Jones
 
 
@@ -385,9 +375,10 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
     F[j][1] = F[j][1] - fij[1];
     F[j][2] = F[j][2] - fij[2];
 
-    Ui = 4*(r12i - r6i); // sum up the potential energy for particle i.
+    Ui = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
 
     return Ui;
+    cout << Ui << endl;
 }
 
 
@@ -407,7 +398,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 10000;
+    int tmax = 1000;
     double Ek, Ep, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -439,7 +430,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             else if (R[i][2] < 0){R[i][2] = R[i][2] + Lz;}
         }
 
-        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
+        update_box_list(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
         E_tot_system = 0;
         Ek = 0;
         Ep = 0;
@@ -641,12 +632,12 @@ int main(){
      *  using initialize to generate intial state
      */
 
-    cout << "scaled mass:   " << m << endl;
-    cout << "scaled time:   " << 0.02 << endl;
-    cout << "scaled length: " << length << endl;
-    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
-    cout << "scaled Energy: " << eps/E << endl;
-    cout << "scaled Temp.:  " << T_0 << endl;
+//    cout << "scaled mass:   " << m << endl;
+//    cout << "scaled time:   " << 0.02 << endl;
+//    cout << "scaled length: " << length << endl;
+//    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
+//    cout << "scaled Energy: " << eps/E << endl;
+//    cout << "scaled Temp.:  " << T_0 << endl;
 
 //    clock_t time1, time2;
 //    time1 = clock();

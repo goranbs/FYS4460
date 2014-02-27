@@ -13,11 +13,11 @@ InitialState::InitialState(){
 }
 void InitialState::two_particles(vector < vector < double > > &R, vector < vector < double > > &V, double Lx, double Ly, double Lz){
     R[0][0] = Lx/3.0;
-    R[0][1] = 0;
-    R[0][2] = 0;
+    R[0][1] = 2*Ly/3.0;
+    R[0][2] = 2*Lz/3.0;
     R[1][0] = 2*Lx/3.0;
-    R[1][1] = 0;
-    R[1][2] = 0;
+    R[1][1] = 2*Ly/3.0;
+    R[1][2] = 2*Lz/3.0;
 
 
     V[0][0] = 0.5;
