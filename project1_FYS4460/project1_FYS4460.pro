@@ -9,6 +9,8 @@ SOURCES += main.cpp \
     cell.cpp \
     initialstate.cpp
 
+#LIBS += -larmadillo -lblas -llapack
+
 HEADERS += \
     unitconverter.h \
     cell.h \

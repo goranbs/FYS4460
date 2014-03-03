@@ -8,10 +8,12 @@
 #include <random>
 #include <unitconverter.h>
 #include <list>
-#include <algorithm>
+#include <algorithm>        //
 #include "initialstate.h"
+//#include <armadillo>
 
 using namespace std;
+//using namespace arma;
 
 double pi = 4*atan(1);
 
@@ -202,7 +204,6 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
     double std_dev_z;
 
     for (int i=0;i<N;++i){
-        //cout << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " << endl;
         sum_v_x = sum_v_x + V[i][0];
         sum_v_y = sum_v_y + V[i][1];
         sum_v_z = sum_v_z + V[i][2];
@@ -261,28 +262,24 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
  * forces with boxes - currently not working :-)
  */
 
-    vector <int> calculated_boxes;
-    vector <int> n_calculated_neighbours;
+
+    vector < vector < int > > list_of_neighbours_to_calculate_for_each_box (N_cells_x*N_cells_y*N_cells_z);
+    vector < int >  list_of_visited_boxes;
     for (int box_x = 0; box_x < N_cells_x; ++box_x){
         for (int box_y = 0; box_y < N_cells_y; ++box_y){
             for (int box_z = 0; box_z < N_cells_z; ++box_z){
 
-                // cubic to linear index transform:
-                int box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
-                // for every particle in box_list[box_index]:
+                int main_box_index = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
 
-                int n_neighbour = 0;
-
-                for (auto it = box_list[box_index].begin(); it != box_list[box_index].end(); ++it){
-                    // box number; box_index -1,0,1 in x,y and z direction:
-                    for (int ix=-1; ix<=1; ++ix){
-                        for (int iy=-1; iy<=1; ++iy){
-                            for (int iz=-1; iz<=1; ++iz){
+                    for (int dx=-1; dx<=1; ++dx){
+                        for (int dy=-1; dy<=1; ++dy){
+                            for (int dz=-1; dz<=1; ++dz){
                                 //neighbour boxes:
-                                box_x = box_x + ix;
-                                box_y = box_y + iy;
-                                box_z = box_z + iz;
+                                int neighbour_x = (box_x + dx + N_cells_x) % N_cells_x;
+                                int neighbour_y = (box_y + dy + N_cells_y) % N_cells_y;
+                                int neighbour_z = (box_z + dz + N_cells_z) % N_cells_z;
 
+                                /*
                                 if (box_x < 0){ box_x = box_x + N_cells_x;}
                                 else if (box_x >= N_cells_x){ box_x = box_x - N_cells_x;}
 
@@ -291,46 +288,63 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                                 if (box_z < 0){ box_z = box_z + N_cells_z;}
                                 else if (box_z >= N_cells_z){box_z = box_z - N_cells_z;}
+                                */
 
-                                // neighbour_index cubic to linear transform:
-                                int neighbour = box_x*N_cells_y*N_cells_z + box_y*N_cells_z + box_z;
+                                int neighbour_index = neighbour_x*N_cells_y*N_cells_z + neighbour_y*N_cells_z + neighbour_z;
 
-                               // if box index has been used before:
-                                if (find(calculated_boxes.begin(), calculated_boxes.end(), neighbour) == calculated_boxes.end()){
-                                    // then we have not calculated the forces from this box, and we may proceed:
+                                if ( find(list_of_visited_boxes.begin(), list_of_visited_boxes.end(), neighbour_index) == list_of_visited_boxes.end()){
+                                    list_of_neighbours_to_calculate_for_each_box[main_box_index].push_back(neighbour_index);
 
-                                    if (neighbour == box_index){
-                                        // Same box calculation
-                                        auto iterator = it;
-                                        for (auto it2 = ++iterator; it2 != box_list[box_index].end(); ++it2){
-                                            int i = *it;
-                                            int j = *it2;
-
-                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
-                                        }
-                                    }
-                                    else {
-                                        // neighbour box calculation
-                                        for (auto it2 = box_list[neighbour].begin(); it2 != box_list[neighbour].end(); ++it2){
-                                            int i = *it;
-                                            int j = *it2;
-
-                                            U[i] += calculate_forces(R,F,i,j,Lx,Ly,Lz);
-
-                                        }
-                                    }
-                                    n_neighbour += 1;
                                 }
-                            } //                 (z)
-                        }  //                    (y)
-                    } // for every neighbour box (x)
-                } // every particle in box
-                n_calculated_neighbours.push_back(n_neighbour);
-                calculated_boxes.push_back(box_index);
-            } //             (z)
-        } //                 (y)
-    } // every box in system (x)
-} // end Lennard-Jones
+                            }
+                        }
+                    }
+                    list_of_visited_boxes.push_back(main_box_index);
+
+            }
+        }
+    }
+
+    /* the force calculation
+     * We need to calulate the forces between every particle in the main box and its neighbours
+     */
+    for (int x = 0; x < N_cells_x; ++x) {
+        for (int y = 0; y < N_cells_y; ++y) {
+            for (int z = 0; z < N_cells_z; ++z) {
+
+                int main_box_index = N_cells_x*N_cells_y*x + N_cells_y*y + z;
+
+                for (auto it = box_list[main_box_index].begin(); it!= box_list[main_box_index].end(); ++it){
+                    // iterates over all particles in box_list[main_index]
+                    int i = *it;
+                    double u = 0;
+
+                    for (int neighbour_index : list_of_neighbours_to_calculate_for_each_box[main_box_index]){
+                        // for every neighbour:
+
+
+
+                        for (auto it2 = box_list[neighbour_index].begin(); it2 != box_list[neighbour_index].end(); ++it2){
+                            // for every particle in neighbour box:
+
+                            int j = *it2;
+
+                            if (i != j){
+
+                                u += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+
+                            }
+
+                        } // particle in neighbour box
+                    } // neighbour box
+                    U[i] += u;
+                } // main box
+            }
+        }
+    }
+
+}// end Lennard-Jones
+
 
 
 
@@ -378,7 +392,6 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
     Ui = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
 
     return Ui;
-    cout << Ui << endl;
 }
 
 
@@ -398,8 +411,8 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 1000;
-    double Ek, Ep, E_kin, E_tot, E_tot_system;     // E_tot = E_kin + U
+    int tmax = 500;
+    double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
     E_quad = 0;
@@ -431,7 +444,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         }
 
         update_box_list(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
-        E_tot_system = 0;
+
         Ek = 0;
         Ep = 0;
 
@@ -440,6 +453,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             F[p][0] = 0;
             F[p][1] = 0;
             F[p][2] = 0;
+            //And the potential energy!!
+            U[p] = 0;
+            //cout << "clearing force and potential energy..." << endl;
         }
         Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);              // calculate the force at time (t+dt) using the new positions.
         write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0); // write to file
@@ -448,23 +464,18 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
 
-            E_kin = 0.5*m*sqrt(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]);
-            E_tot = E_kin + U[i]; // total energy for particle i
-            Ek += E_kin;          // total kinetic energy
+            Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
             Ep += U[i];
-            E_tot_system += E_tot;
-            // Write to file:
-            //myfile << "Ar" << " " << R[i][0] << " " << R[i][1] << " " << R[i][2] << " " << V[i][0] << " " << V[i][1] << " " << V[i][2] << " " <<  F[i][0] << " " << F[i][1] << " " << F[i][2] << " " << E_tot << " " << endl;
         }
 
 
         Time_vec.push_back(t*dt/Time_0);           // [fs]
-        E_system.push_back(E_tot_system);          // Energy of the system.
+        E_system.push_back(Ek+Ep);                 // Energy of the system.
         Ekin.push_back(Ek);
         Epot.push_back(Ep);
         double tempi = 2*Ek/(3.0*N);
         Temperature.push_back(tempi);     // Temperature
-        cout << "t= " << t << " E= " << E_tot_system << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi*T_0 << endl;
+        cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi*T_0 << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
 
@@ -490,6 +501,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     E_stdev = sqrt(E_quad - E_mean_system*E_mean_system);
     cout << "Total energy of the system= " << E_mean_system << " stdev= " << E_stdev << endl;
     cout << "fluctuation is " << 100*E_stdev/E_mean_system << "%" << endl;
+
 }
 
 
@@ -626,34 +638,35 @@ int main(){
      *                 unittesting with only two particles
      */
 
-    test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
+    //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
 
     /*******************************************************************************************
      *  using initialize to generate intial state
      */
 
-//    cout << "scaled mass:   " << m << endl;
-//    cout << "scaled time:   " << 0.02 << endl;
-//    cout << "scaled length: " << length << endl;
-//    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
-//    cout << "scaled Energy: " << eps/E << endl;
-//    cout << "scaled Temp.:  " << T_0 << endl;
+    cout << "scaled mass:   " << m << endl;
+    cout << "scaled time:   " << 0.02 << endl;
+    cout << "scaled length: " << length << endl;
+    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
+    cout << "scaled Energy: " << eps/E << endl;
+    cout << "scaled Temp.:  " << T_0 << endl;
 
-//    clock_t time1, time2;
-//    time1 = clock();
+    clock_t time1, time2;
+    time1 = clock();
 
-//    initialize(V,R,N,Nx,Ny,Nz);
+    initialize(V,R,N,Nx,Ny,Nz);
 
-//    time1 = clock() - time1;
+    time1 = clock() - time1;
 
-//    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
+    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
-//    time2 = clock();
-//    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
-//    time2 = clock() - time2;
+    time2 = clock();
+    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    time2 = clock() - time2;
 
-//    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
-//    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
+    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
+    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
 
     return 0;
 }
+
