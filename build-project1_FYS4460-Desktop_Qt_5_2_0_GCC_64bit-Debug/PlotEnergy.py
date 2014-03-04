@@ -1,16 +1,14 @@
 '''
-PlotEnergy.py - project1_FYS4460
+                    PlotEnergy.py - project1_FYS4460
 
-Should read output files, sum up the total energy of the system, and plot
-the energy as a function of time to see how well the energy of the system 
-is conserved.
+Should read output files from the MD program in FYS4460.
 '''
 
 import numpy as np
 
-num_files = 399
+num_files = 499
 
-filename = 'state%04g.txt' % 0      # filename = 'state000.txt' initial file
+filename = 'state%04g.txt' % 0      # filename = 'state0000.txt' initial file
 file = open(filename,'r')
 
 N = int(file.readline())            # number of atoms
@@ -21,9 +19,10 @@ E_sys = []
 time = []
 time.append(t0) # first time value
 E_sys.append(0) # first value
+
 for i in range(num_files-1):
     i = i+1
-    filename = 'state%04g.txt' % i      # filename = 'state000.txt'
+    filename = 'state%04g.txt' % i      # filename = 'state0001.txt'
     file = open(filename,'r')
     
     N_atoms = int(file.readline())            # number of atoms

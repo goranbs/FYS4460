@@ -25,7 +25,7 @@ void write_to_file(vector<vector<double> > R, vector<vector<double> > V, vector<
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
 
-double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz);
+double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz, double Pi);
 
 /**********************************************************************************************************
  *             CONSTANTS
@@ -33,12 +33,13 @@ double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, 
  */
 // Check out the constants, do they fit with those in the project text?
 double b = 5.260;                 // Ångstrøm [Å]
-//double b = 20.0;                 // Ångsrøm [Å]
+//double b = 20.0;                // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
-double eps = 0.1*1.0303;          // Energy constant [eV]
+double eps = 0.01*1.0318;         // Energy constant [eV]
 double Temp = 100.0;              // Kelvin, initial temperature
 double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
+double P_0 = 1.60217657*pow(10,11.0)/(b*b*b); // [N/m^2] Pressure
 /**********************************************************************************************************
  * Conversion factors, so that we get out units that we would like to use
  */
@@ -70,6 +71,7 @@ double random_number(){
     /****************************************************************************
      *  Random number generator - Bolzmann distribution
      *                Box-Muller transform
+     * Standard deviation of the distribution std = sqrt(kB*T/m)
      */
     double U1 = rand()/float(RAND_MAX);
     double U2 = rand()/float(RAND_MAX);
@@ -117,7 +119,7 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
         iy = floor(R[p][1]/Lcy);
         iz = floor(R[p][2]/Lcz);
         box_index = ix*ny*nz + iy*nz + iz;   // cubic to linear transform, (nested lists)
-        if (box_index > 26){
+        if (box_index > box_list.size()){
             cout <<"Tried to access box nr: " << box_index << endl;
         }
         box_list[box_index].push_back(p);        // put particle p into box number box_index
@@ -238,7 +240,12 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
 
 }
 
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list){
+/* ******************************************************************************************************
+ *                                          LENNARD-JONES
+ *                                         BOX-calculation
+ ** ******************************************************************************************************
+ */
+void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double &P_sum){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      * One box-calculation - calulating the contribution from every particle in the system.
      *
@@ -331,13 +338,13 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                             if (i != j){
 
-                                u += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                                u += calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum);
 
                             }
 
                         } // particle in neighbour box
                     } // neighbour box
-                    U[i] += u;
+                    U[i] = u;
                 } // main box
             }
         }
@@ -346,9 +353,12 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 }// end Lennard-Jones
 
 
+/********************************************************************************************************
+ *                              CALCULATE FORCES
+ * ******************************************************************************************************
+ */
 
-
-double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz){
+double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz, double Pi){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
@@ -391,10 +401,17 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
 
     Ui = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
 
+    if (i < j){ // just to be sure :-)
+         Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
+    }
     return Ui;
 }
 
 
+/***********************************************************************************************************************
+ *                                  INTEGRATOR
+ * *********************************************************************************************************************
+ */
 void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
 
     /* *********************************************************************************************
@@ -411,13 +428,14 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 500;
+    int tmax = 50;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
     E_quad = 0;
 
     vector < double > Time_vec ;
+    vector < double > Pressure ;
 
     for (int t=0;t<tmax;++t){
         char filename [20];
@@ -442,11 +460,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             if (R[i][2] > Lz){R[i][2] = R[i][2] - Lz;}
             else if (R[i][2] < 0){R[i][2] = R[i][2] + Lz;}
         }
-
-        update_box_list(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
-
         Ek = 0;
         Ep = 0;
+        double P_sum = 0;
 
         for (int p = 0; p < R.size(); ++p) {
             // clear the force matrix:
@@ -457,8 +473,11 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             U[p] = 0;
             //cout << "clearing force and potential energy..." << endl;
         }
-        Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);              // calculate the force at time (t+dt) using the new positions.
-        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0); // write to file
+
+        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);      // Update box-list
+        Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
+        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                    // write to file
+
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
@@ -474,17 +493,19 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
         Ekin.push_back(Ek);
         Epot.push_back(Ep);
         double tempi = 2*Ek/(3.0*N);
-        Temperature.push_back(tempi);     // Temperature
-        cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi*T_0 << endl;
+        Temperature.push_back(tempi);              // Temperature
+        double Press = (N*tempi + P_sum/3);        // Pressure
+        Pressure.push_back(Press);                 // Pressure
+        cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
 
     // Write temperatures to file temperatures.txt
     ofstream ofile("temperatures.txt");
-    ofile << "Temperature of system as a function of time" << endl;
-    ofile << "[Temprature,K] [Time,fs] [E_kin]" << endl;
+    ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
+    ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
     for (int t = 0; t < tmax; ++t) {
-        ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps << endl;
+        ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << endl;
     }
     ofile.close();
 
@@ -543,6 +564,11 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 
 //}
 
+/*******************************************************************************************************************************
+ *                                        Test with 2 particles
+ * *****************************************************************************************************************************
+ */
+
 void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,int N_cells_z, vector < list < int > > box_list){
 
     vector < vector < double > > R (2,vector < double > (3,0));
@@ -574,31 +600,36 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
 }
 
-
+/***************************************************************************************************************************
+ *                                    Write to File
+ ***************************************************************************************************************************
+ */
 void write_to_file(vector < vector < double > > R, vector < vector < double > > V, vector < vector < double > > F, vector < list < int > > box_list,string filename, int N, double t){
-    /* Writes positions R[i], velocities V[i] and forcec F[i] to file where i denotest particle i,
-     * to file filename
+    /* Writes positions R[p], velocities V[p] and forcec F[p] to file where p denotest particle p, to file filename.
+     * every particle belongs to a box in the system. The box is numbered boxnumber.
      */
 
     ofstream myfile;
     myfile.open(filename);
     myfile << N << endl;
     myfile << filename << "time: " << t << endl;
-    for (int boxnr = 0; boxnr < box_list.size(); ++boxnr){
-        for (auto it = box_list[boxnr].begin(); it != box_list[boxnr].end(); ++it){
-            int index = *it;
-            if (floor(index) != index){
-                cout << "somethings wrong!!!" << boxnr << " " << index << endl;
-            }
-            if (index < 0){
-                cout << "index=" << index << " boxnumber=" << endl;
-            }
-            myfile << "Ar" << " " << R[index][0] << " " << R[index][1] << " " << R[index][2] << " " << V[index][0] << " " << V[index][1] << " " << V[index][2] << " " <<  F[index][0] << " " << F[index][1] << " " << F[index][2] << " " << boxnr << endl;
+
+    for (int box_nr = 0; box_nr < box_list.size(); ++box_nr){
+
+        for (auto it = box_list[box_nr].begin(); it != box_list[box_nr].end(); ++it){
+            int p = *it; // particle p in boxnr
+
+            myfile << "Ar" << " " << R[p][0] << " " << R[p][1] << " " << R[p][2] << " " << V[p][0] << " " << V[p][1] << " " << V[p][2] << " " <<  F[p][0] << " " << F[p][1] << " " << F[p][2] << " " << box_nr << endl;
         }
     }
     myfile.close();
 }
 
+
+/*******************************************************************************************************************
+ *                                                MAIN
+ * *****************************************************************************************************************
+ */
 int main(){
 
     // create a vector within a vector, using including the <vector> library.
@@ -644,12 +675,6 @@ int main(){
      *  using initialize to generate intial state
      */
 
-    cout << "scaled mass:   " << m << endl;
-    cout << "scaled time:   " << 0.02 << endl;
-    cout << "scaled length: " << length << endl;
-    cout << "scaled Force:  " << eps*sigma/F_0 << endl;  // ? eps, kB ?
-    cout << "scaled Energy: " << eps/E << endl;
-    cout << "scaled Temp.:  " << T_0 << endl;
 
     clock_t time1, time2;
     time1 = clock();
@@ -664,6 +689,9 @@ int main(){
     integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time2 = clock() - time2;
 
+    cout << "____________________________________________________________________________________________" << endl;
+    cout << "Unitless; mass= " << m << " Energy= " << E << " Temperature= " << Temp/T_0 << " Length= " << length << endl;
+    cout << "____________________________________________________________________________________________" << endl;
     cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
     cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
 
