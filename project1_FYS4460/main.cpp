@@ -21,19 +21,19 @@ double pi = 4*atan(1);
  *             FUNCTION DECLARATIONS
  * ********************************************************************************************************
  */
-void write_to_file(vector<vector<double> > R, vector<vector<double> > V, vector<vector<double> > F, vector<list<int> > box_list, string filename, int N, double t);
+void write_to_file(const vector<vector<double> > &R,const vector<vector<double> > &V,const vector<vector<double> > &F,const vector<list<int> > &box_list, const string &filename, int N,double t);
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
 
-double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz, double Pi);
+double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz, double Pi, vector < double > &U);
 
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
  */
 // Check out the constants, do they fit with those in the project text?
-double b = 5.260;                 // Ångstrøm [Å]
-//double b = 20.0;                // Ångsrøm [Å]
+//double b = 5.260;                 // Ångstrøm [Å]
+double b = 20.0;                // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.01*1.0318;         // Energy constant [eV]
@@ -281,6 +281,8 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                     for (int dx=-1; dx<=1; ++dx){
                         for (int dy=-1; dy<=1; ++dy){
                             for (int dz=-1; dz<=1; ++dz){
+                                if (dx == 0 && dy == 0 && dz == 0) continue; //
+
                                 //neighbour boxes:
                                 int neighbour_x = (box_x + dx + N_cells_x) % N_cells_x;
                                 int neighbour_y = (box_y + dy + N_cells_y) % N_cells_y;
@@ -319,12 +321,21 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
         for (int y = 0; y < N_cells_y; ++y) {
             for (int z = 0; z < N_cells_z; ++z) {
 
-                int main_box_index = N_cells_x*N_cells_y*x + N_cells_y*y + z;
+                int main_box_index = N_cells_z*N_cells_y*x + N_cells_z*y + z;
+
+                for (auto it = box_list[main_box_index].begin(); it != box_list[main_box_index].end(); ++it){
+                    auto iter = it;
+                    int i = *it;
+                    for (auto it2 = ++iter; it2 != box_list[main_box_index].end(); ++it2){
+                        int j = *it2;
+                        calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum,U);
+
+                    }
+                }
 
                 for (auto it = box_list[main_box_index].begin(); it!= box_list[main_box_index].end(); ++it){
                     // iterates over all particles in box_list[main_index]
                     int i = *it;
-                    double u = 0;
 
                     for (int neighbour_index : list_of_neighbours_to_calculate_for_each_box[main_box_index]){
                         // for every neighbour:
@@ -338,13 +349,13 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
                             if (i != j){
 
-                                u += calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum);
+                                calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum,U);
 
                             }
 
                         } // particle in neighbour box
                     } // neighbour box
-                    U[i] = u;
+
                 } // main box
             }
         }
@@ -358,15 +369,15 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
  * ******************************************************************************************************
  */
 
-double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz, double Pi){
+vector < double > fij (3);
+vector < double > r_ij (3);
+double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz, double Pi, vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
      */
 
     double r2,r2i,r6i,r12i,Ui;
-    vector < double > fij (3);
-    vector < double > r_ij (3);
 
     r_ij[0]=  R[i][0] - R[j][0];
     r_ij[1] = R[i][1] - R[j][1];
@@ -399,7 +410,8 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
     F[j][1] = F[j][1] - fij[1];
     F[j][2] = F[j][2] - fij[2];
 
-    Ui = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
+    U[i] = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
+    U[j] = U[i];
 
     if (i < j){ // just to be sure :-)
          Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
@@ -412,7 +424,7 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
  *                                  INTEGRATOR
  * *********************************************************************************************************************
  */
-void integrator(vector < vector < double > > &V,vector < vector < double > > &R,int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
+void integrator(vector < vector < double > > &V,vector < vector < double > > &R, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -428,7 +440,7 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 50;
+    int tmax = 500;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -474,9 +486,9 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
             //cout << "clearing force and potential energy..." << endl;
         }
 
-        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);      // Update box-list
+        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);         // Update box-list
         Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
-        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                    // write to file
+        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                          // write to file
 
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
@@ -510,13 +522,13 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
     ofile.close();
 
     // Calculate the total energy of the system and its standard deviation:
-    for (int index = 0; index < N; ++index) {
+    for (int index = 0; index < E_system.size(); ++index) {
         E_mean_system = E_mean_system + E_system[index];
         E_quad = E_quad + E_system[index]*E_system[index];
         //cout << E_system[index] << endl;
     }
-    E_mean_system = E_mean_system/float(N);
-    E_quad = E_quad/float(N);
+    E_mean_system = E_mean_system/double(E_system.size());
+    E_quad = E_quad/double(E_system.size());
     //cout << E_mean_system << endl;
     //cout << E_quad << endl;
     E_stdev = sqrt(E_quad - E_mean_system*E_mean_system);
@@ -604,7 +616,7 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
  *                                    Write to File
  ***************************************************************************************************************************
  */
-void write_to_file(vector < vector < double > > R, vector < vector < double > > V, vector < vector < double > > F, vector < list < int > > box_list,string filename, int N, double t){
+void write_to_file(const vector < vector < double > > &R, const vector < vector < double > > &V, const vector < vector < double > > &F, const vector < list < int > > &box_list, const string &filename, int N, double t){
     /* Writes positions R[p], velocities V[p] and forcec F[p] to file where p denotest particle p, to file filename.
      * every particle belongs to a box in the system. The box is numbered boxnumber.
      */
@@ -616,8 +628,7 @@ void write_to_file(vector < vector < double > > R, vector < vector < double > > 
 
     for (int box_nr = 0; box_nr < box_list.size(); ++box_nr){
 
-        for (auto it = box_list[box_nr].begin(); it != box_list[box_nr].end(); ++it){
-            int p = *it; // particle p in boxnr
+        for (const int & p : box_list[box_nr]){
 
             myfile << "Ar" << " " << R[p][0] << " " << R[p][1] << " " << R[p][2] << " " << V[p][0] << " " << V[p][1] << " " << V[p][2] << " " <<  F[p][0] << " " << F[p][1] << " " << F[p][2] << " " << box_nr << endl;
         }
