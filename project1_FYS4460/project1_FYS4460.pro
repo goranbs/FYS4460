@@ -7,14 +7,16 @@ SOURCES += main.cpp \
     integrator.cpp \
     unitconverter.cpp \
     cell.cpp \
-    initialstate.cpp
+    initialstate.cpp \
+    atom.cpp
 
 #LIBS += -larmadillo -lblas -llapack
 
 HEADERS += \
     unitconverter.h \
     cell.h \
-    initialstate.h
+    initialstate.h \
+    atom.h
 
 release {
     QMAKE_CXXFLAGS_RELEASE -= -O2

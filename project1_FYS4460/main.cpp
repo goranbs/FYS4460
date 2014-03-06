@@ -15,7 +15,7 @@
 using namespace std;
 //using namespace arma;
 
-double pi = 4*atan(1);
+const double pi = 4*atan(1);
 
 /**********************************************************************************************************
  *             FUNCTION DECLARATIONS
@@ -25,15 +25,15 @@ void write_to_file(const vector<vector<double> > &R,const vector<vector<double> 
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
 
-double calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, int i, int j, double Lx, double Ly, double Lz, double Pi, vector < double > &U);
+void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
 
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
  */
 // Check out the constants, do they fit with those in the project text?
-//double b = 5.260;                 // Ångstrøm [Å]
-double b = 20.0;                // Ångsrøm [Å]
+double b = 5.260;                 // Ångstrøm [Å]
+//double b = 20.0;                // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.01*1.0318;         // Energy constant [eV]
@@ -255,14 +255,11 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
             for (int j = i; j < R.size(); ++j) {
                 if ( j != i) {
 
-                    Ui += calculate_forces(R,F,i,j,Lx,Ly,Lz);
+                   calculate_forces(R,F,i,j,Lx,Ly,Lz,U);
 
                 } // end if
             } // end for j
-
-            U[i] = Ui; // Total potential energy of particle i.
         } // end for i
-
 } // end Lennard-Jones
 */
 /*******************************************************************************************************************
@@ -288,17 +285,6 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                                 int neighbour_y = (box_y + dy + N_cells_y) % N_cells_y;
                                 int neighbour_z = (box_z + dz + N_cells_z) % N_cells_z;
 
-                                /*
-                                if (box_x < 0){ box_x = box_x + N_cells_x;}
-                                else if (box_x >= N_cells_x){ box_x = box_x - N_cells_x;}
-
-                                if (box_y < 0){ box_y = box_y + N_cells_y; }
-                                else if (box_y >= N_cells_y){box_y = box_y - N_cells_y;}
-
-                                if (box_z < 0){ box_z = box_z + N_cells_z;}
-                                else if (box_z >= N_cells_z){box_z = box_z - N_cells_z;}
-                                */
-
                                 int neighbour_index = neighbour_x*N_cells_y*N_cells_z + neighbour_y*N_cells_z + neighbour_z;
 
                                 if ( find(list_of_visited_boxes.begin(), list_of_visited_boxes.end(), neighbour_index) == list_of_visited_boxes.end()){
@@ -309,7 +295,6 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
                         }
                     }
                     list_of_visited_boxes.push_back(main_box_index);
-
             }
         }
     }
@@ -371,13 +356,13 @@ void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > >
 
 vector < double > fij (3);
 vector < double > r_ij (3);
-double calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, int i, int j, double Lx,double Ly,double Lz, double Pi, vector < double > &U){
+void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
      */
 
-    double r2,r2i,r6i,r12i,Ui;
+    double r2,r2i,r6i,r12i;
 
     r_ij[0]=  R[i][0] - R[j][0];
     r_ij[1] = R[i][1] - R[j][1];
@@ -410,13 +395,12 @@ double calculate_forces(vector < vector < double > > &R, vector < vector < doubl
     F[j][1] = F[j][1] - fij[1];
     F[j][2] = F[j][2] - fij[2];
 
-    U[i] = 4*(r12i - r6i); // the potential energy for particle i in j's presence.
-    U[j] = U[i];
+    U[i] += 4*(r12i - r6i); // the potential energy for particle i in j's presence.
+    //U[j] += U[i];           // potential energy for j in i's presence. If we add this, the potential energy becomes too large, why?
 
     if (i < j){ // just to be sure :-)
          Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
     }
-    return Ui;
 }
 
 
@@ -538,44 +522,6 @@ void integrator(vector < vector < double > > &V,vector < vector < double > > &R,
 }
 
 
-//void ReadInitailState(string filename, vector < vector < double > > &R, vector < vector < double > > &V){
-/* Read inital state from filename and return positions R, velocities V
- */
-
-//    ifstream myfile;
-//    myfile.open(filename.c_str());
-
-//    string firstline, secondline;
-//    getline(myfile,firstline);
-//    getlinge(myfile,secondline);
-//    secondline.c_str(); // split on whitespace
-//    double t0 = secondline[2];
-//    double rx,ry,rz,vx,vy,vz,fx,fy,fz;
-//    int it = 0;
-//    while(!myfile.eof()){
-//        myfile >> rx;
-//        myfile >> ry;
-//        myfile >> rz;
-//        myfile >> vx;
-//        myfile >> vy;
-//        myfile >> vz;
-//        myfile >> fx;
-//        myfile >> fy;
-//        myfile >> fz;
-//        R[it][0] = rx;
-//        R[it][1] = ry;
-//        R[it][2] = rz;
-//        V[it][0] = vx;
-//        V[it][1] = vy;
-//        V[it][2] = vz;
-//        F[it][0] = fx;
-//        F[it][1] = fy;
-//        F[it][2] = fz;
-//        it += it;
-//    }
-
-//}
-
 /*******************************************************************************************************************************
  *                                        Test with 2 particles
  * *****************************************************************************************************************************
@@ -647,19 +593,20 @@ int main(){
     vector < vector < double > > R; // positions
     vector < vector < double > > V; // velocities
     int N;
-    double Nx, Ny, Nz; // number of origins
+    int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
-    Nx = 5;
-    Ny = 5;
-    Nz = 5;
+    int kappa = 5;
+    Nx = kappa;
+    Ny = kappa;
+    Nz = kappa;
     Lx = Nx*length;
     Ly = Ny*length;
     Lz = Nz*length;
 
     // Cells
     double Lcx,Lcy,Lcz; // length of cell
-    double N_cells_x,N_cells_y,N_cells_z;        // number of cells
-    N_cells_x = N_cells_y = N_cells_z = 3.0;
+    int N_cells_x,N_cells_y,N_cells_z;        // number of cells
+    N_cells_x = N_cells_y = N_cells_z = 3;
     int N_boxes;
     N_boxes = int(N_cells_x*N_cells_y*N_cells_z);
 
@@ -691,6 +638,14 @@ int main(){
     time1 = clock();
 
     initialize(V,R,N,Nx,Ny,Nz);
+    // or something like: read_initial_state_from_file()
+    vector < vector < double > > r_initial (R.size(),vector < double > (3,0));
+
+    for (int i = 0; i < N; ++i) {
+        for (int dir = 0; dir < 3; ++dir) {
+         r_initial[i][dir] = R[i][dir];
+        }
+    }
 
     time1 = clock() - time1;
 
@@ -709,3 +664,40 @@ int main(){
     return 0;
 }
 
+//void ReadInitailState(string filename, vector < vector < double > > &R, vector < vector < double > > &V){
+/* Read inital state from filename and return positions R, velocities V
+ */
+
+//    ifstream myfile;
+//    myfile.open(filename.c_str());
+
+//    string firstline, secondline;
+//    getline(myfile,firstline);
+//    getlinge(myfile,secondline);
+//    secondline.c_str(); // split on whitespace
+//    double t0 = secondline[2];
+//    double rx,ry,rz,vx,vy,vz,fx,fy,fz;
+//    int it = 0;
+//    while(!myfile.eof()){
+//        myfile >> rx;
+//        myfile >> ry;
+//        myfile >> rz;
+//        myfile >> vx;
+//        myfile >> vy;
+//        myfile >> vz;
+//        myfile >> fx;
+//        myfile >> fy;
+//        myfile >> fz;
+//        R[it][0] = rx;
+//        R[it][1] = ry;
+//        R[it][2] = rz;
+//        V[it][0] = vx;
+//        V[it][1] = vy;
+//        V[it][2] = vz;
+//        F[it][0] = fx;
+//        F[it][1] = fy;
+//        F[it][2] = fz;
+//        it += it;
+//    }
+
+//}
