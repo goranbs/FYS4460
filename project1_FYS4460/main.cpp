@@ -11,6 +11,8 @@
 #include <algorithm>        //
 #include "initialstate.h"
 #include "atom.h"
+#include <string>
+
 //#include <armadillo>
 
 using namespace std;
@@ -27,6 +29,10 @@ void write_to_file(const vector<vector<double> > &R,const vector<vector<double> 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
 
 void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
+
+void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
+
+void ReadInitialState(string filename, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, int &N);
 
 /**********************************************************************************************************
  *             CONSTANTS
@@ -409,23 +415,21 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
  *                                  INTEGRATOR
  * *********************************************************************************************************************
  */
-void integrator(vector < vector < double > > &V,vector < vector < double > > &R, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list < int > > &box_list){
+void integrator(vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
      *  using the Lenny-Jones potential to find the force between evry particle.
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
-
-    vector < vector < double > > F (R.size(), vector < double > (3,0)); // Vector that holds the forces on particle i.
-    vector < double >  U (R.size(),0);         // Vector that holds the potential energy for particle i.
+    vector < double >  U (R.size());         // Vector that holds the potential energy for particle i.
     vector < double > E_system;
     vector < double > Temperature;
     vector < double > Ekin;
     vector < double > Epot;
 
     double dt = 0.02;
-    int tmax = 500;
+    int tmax = 1000;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     E_mean_system = 0;
@@ -532,6 +536,7 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
     vector < vector < double > > R (2,vector < double > (3,0));
     vector < vector < double > > V (2,vector < double > (3,0));
+    vector < vector <double> > F (R.size(), vector <double> (3,0));
 
     InitialState twoparts;
     twoparts.two_particles(R,V,Lx,Ly,Lz);
@@ -551,7 +556,7 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
     clock_t time3;
     time3 = clock();
-    integrator(V,R,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    //ntegrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time3 = clock() - time3;
 
     cout << "two particles" << endl;
@@ -584,36 +589,6 @@ void write_to_file(const vector < vector < double > > &R, const vector < vector 
 }
 
 
-void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
-    double up = 0.01;
-    vector < Atom > atoms;
-    for (int p = 0; p < N; ++p) {
-        Atom argon(R[p],V[p],F[p],up);
-        atoms.push_back(argon);
-    }
-    for (int atom = 0; atom < N; ++atom) {
-        R[atom][0] = 1.1 + R[atom][0];
-        R[atom][1] = 1.1 + R[atom][1];
-        R[atom][2] = 1.1 + R[atom][2];
-    }
-    for (int atom = 0; atom < N; ++atom) {
-        atoms[atom].update_position(R[atom]);
-        atoms[atom].cross_boundary(1,-1,0);
-        atoms[atom].cross_boundary(-1,1,1);
-    }
-
-    vector < double > dist = atoms[0].return_distance_traveled();
-    vector < double > number_of_crossings = atoms[0].return_n_crossings();
-    vector < double > r0 = atoms[0].get_initial_position();
-
-    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
-    cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
-    cout <<  R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << endl;
-    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
-    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
-    cout << "------------------------------------------------------------------------" << endl;
-}
-
 
 
 /*******************************************************************************************************************
@@ -625,6 +600,7 @@ int main(){
     // create a vector within a vector, using including the <vector> library.
     vector < vector < double > > R; // positions
     vector < vector < double > > V; // velocities
+    vector < vector < double > > F; // Force
     int N;
     int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
@@ -666,75 +642,167 @@ int main(){
      *  using initialize to generate intial state
      */
 
+    //test_Atom_class(R,V,F,N);
 
-    clock_t time1, time2;
-    time1 = clock();
+    string filename = "state0499.txt";   // read this state filename
+    int RunFromFile = 1;                 // use filename as initial state
+    clock_t time1, time2, time3;
+    double t1,t2,t3;
 
-    initialize(V,R,N,Nx,Ny,Nz);
-    // or something like: read_initial_state_from_file()
-    vector < vector < double > > F (R.size(),vector < double > (3,0));
-
-    test_Atom_class(R,V,F,N);
-    /*
-    for (int i = 0; i < N; ++i) {
-        for (int dir = 0; dir < 3; ++dir) {
-         r_initial[i][dir] = R[i][dir];
+    if (RunFromFile != 0){
+        time3 = clock();
+        ReadInitialState(filename,R,V,F,N);
+        for (int p = 0; p < N; ++p) {
+            cout << R[p][0] << " " << R[p][1] << R[p][2] << endl;
         }
+        time3 = clock()-time3;
+        t3 = double(time3)/CLOCKS_PER_SEC;
+        cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
     }
 
-    time1 = clock() - time1;
+    else{
+        time1 = clock();
+
+        initialize(V,R,N,Nx,Ny,Nz);
+        F = vector < vector <double> > (R.size(),vector <double> (3,0));
+        time1 = clock() - time1;
+        t1 = float(time1)/CLOCKS_PER_SEC;
+        cout << "Initialize used time= " << t1 << " seconds" << endl;
+    }
 
     initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
     time2 = clock();
-    integrator(V,R,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    integrator(V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time2 = clock() - time2;
 
     cout << "____________________________________________________________________________________________" << endl;
     cout << "Unitless; mass= " << m << " Energy= " << E << " Temperature= " << Temp/T_0 << " Length= " << length << endl;
     cout << "____________________________________________________________________________________________" << endl;
-    cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
-    cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
+    if (RunFromFile != 0) cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
+    else cout << "Initialize used time= " << t1 << " seconds" << endl;
+    cout << "Integrator used time= " << double(time2)/CLOCKS_PER_SEC << " seconds" << endl;
 
-    */
 
     return 0;
 }
 
-//void ReadInitailState(string filename, vector < vector < double > > &R, vector < vector < double > > &V){
+
+
+
+
+
+
+
+
+void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
+    double up = 0.01;
+    vector < Atom > atoms;
+    for (int p = 0; p < N; ++p) {
+        Atom argon(R[p],V[p],F[p],up);
+        atoms.push_back(argon);
+    }
+    for (int atom = 0; atom < N; ++atom) {
+        R[atom][0] = 1.1 + R[atom][0];
+        R[atom][1] = 1.2 + R[atom][1];
+        R[atom][2] = 0.1 + R[atom][2];
+    }
+    for (int atom = 0; atom < N; ++atom) {
+        atoms[atom].update_position(R[atom]);
+        atoms[atom].cross_boundary(1,-1,0);
+        atoms[atom].cross_boundary(-1,1,1);
+    }
+
+    vector < double > dist = atoms[0].return_distance_traveled();
+    vector < double > number_of_crossings = atoms[0].return_n_crossings();
+    vector < double > r0 = atoms[0].get_initial_position();
+
+    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
+    cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
+    cout <<  R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << endl;
+    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
+    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
+    cout << "------------------------------------------------------------------------" << endl;
+
+    for (int atom = 0; atom < N; ++atom) {
+        R[atom][0] = -0.01 + R[atom][0];
+        R[atom][1] = 3.14 + R[atom][1];
+        R[atom][2] = 0 + R[atom][2];
+    }
+    for (int atom = 0; atom < N; ++atom) {
+        atoms[atom].update_position(R[atom]);
+        atoms[atom].cross_boundary(0,0,0);
+        atoms[atom].cross_boundary(-1,1,1);
+    }
+
+    dist = atoms[0].return_distance_traveled();
+    number_of_crossings = atoms[0].return_n_crossings();
+    r0 = atoms[0].get_initial_position();
+
+    vector <double> pos = atoms[0].position();
+
+    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
+    cout << r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
+    cout << R[0][0] << " " << R[0][1] << " " << R[0][2] << endl;
+    cout << pos[0] << " " << pos[1] << " " << pos[2] << endl;
+    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
+    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
+    cout << "------------------------------------------------------------------------" << endl;
+}
+
+void ReadInitialState(string filename, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, int &N){
 /* Read inital state from filename and return positions R, velocities V
  */
 
-//    ifstream myfile;
-//    myfile.open(filename.c_str());
+    ifstream myfile;
+    myfile.open(filename.c_str());
 
-//    string firstline, secondline;
-//    getline(myfile,firstline);
-//    getlinge(myfile,secondline);
-//    secondline.c_str(); // split on whitespace
-//    double t0 = secondline[2];
-//    double rx,ry,rz,vx,vy,vz,fx,fy,fz;
-//    int it = 0;
-//    while(!myfile.eof()){
-//        myfile >> rx;
-//        myfile >> ry;
-//        myfile >> rz;
-//        myfile >> vx;
-//        myfile >> vy;
-//        myfile >> vz;
-//        myfile >> fx;
-//        myfile >> fy;
-//        myfile >> fz;
-//        R[it][0] = rx;
-//        R[it][1] = ry;
-//        R[it][2] = rz;
-//        V[it][0] = vx;
-//        V[it][1] = vy;
-//        V[it][2] = vz;
-//        F[it][0] = fx;
-//        F[it][1] = fy;
-//        F[it][2] = fz;
-//        it += it;
-//    }
+    string line, firstline,secondline;
+    //getline(myfile,firstline);
+    myfile >> N;
+    getline(myfile,firstline);
+    getline(myfile,secondline);
+    //cout << "Hello firstline= " << firstline << endl;
+    //cout << "Hello secondline= " << secondline << endl;
+    vector <double> r (3);
+    vector <double> v (3);
+    vector <double> f (3);
+    vector <double> f_ (3);
+    string atomType;
+    int box_index;
 
-//}
+    while(!myfile.eof()){
+        myfile >> atomType;
+
+        for (int i = 0; i < 3; i++) myfile >> r[i];
+        for (int i = 0; i < 3; i++) myfile >> v[i];
+        for (int i = 0; i < 3; i++) myfile >> f[i];
+        myfile >> box_index;
+
+        if (f[0] == f_[0]){
+            if (f[1] == f_[1]){
+                if (f[2] == f_[2]){
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < 3; ++i) {
+            f_[i] = f[i];
+        }
+
+        R.push_back(r);
+        V.push_back(v);
+        F.push_back(f);
+
+//        cout << "-----------------------------------" << endl;
+//        cout << r[0] << " " << r[1] << " " << r[2] << endl;
+//        cout << v[0] << " " << v[1] << " " << v[2] << endl;
+//        cout << f[0] << " " << f[1] << " " << f[2] << endl;
+//        cout << box_index << endl;
+
+        //  myfile.ignore(999, '\n'); // ignore characters untill u find \n, max 999 characters.
+    }
+
+
+    myfile.close();
+}
