@@ -10,6 +10,7 @@
 #include <list>
 #include <algorithm>        //
 #include "initialstate.h"
+#include "atom.h"
 //#include <armadillo>
 
 using namespace std;
@@ -583,6 +584,38 @@ void write_to_file(const vector < vector < double > > &R, const vector < vector 
 }
 
 
+void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
+    double up = 0.01;
+    vector < Atom > atoms;
+    for (int p = 0; p < N; ++p) {
+        Atom argon(R[p],V[p],F[p],up);
+        atoms.push_back(argon);
+    }
+    for (int atom = 0; atom < N; ++atom) {
+        R[atom][0] = 1.1 + R[atom][0];
+        R[atom][1] = 1.1 + R[atom][1];
+        R[atom][2] = 1.1 + R[atom][2];
+    }
+    for (int atom = 0; atom < N; ++atom) {
+        atoms[atom].update_position(R[atom]);
+        atoms[atom].cross_boundary(1,-1,0);
+        atoms[atom].cross_boundary(-1,1,1);
+    }
+
+    vector < double > dist = atoms[0].return_distance_traveled();
+    vector < double > number_of_crossings = atoms[0].return_n_crossings();
+    vector < double > r0 = atoms[0].get_initial_position();
+
+    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
+    cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
+    cout <<  R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << endl;
+    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
+    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
+    cout << "------------------------------------------------------------------------" << endl;
+}
+
+
+
 /*******************************************************************************************************************
  *                                                MAIN
  * *****************************************************************************************************************
@@ -639,8 +672,10 @@ int main(){
 
     initialize(V,R,N,Nx,Ny,Nz);
     // or something like: read_initial_state_from_file()
-    vector < vector < double > > r_initial (R.size(),vector < double > (3,0));
+    vector < vector < double > > F (R.size(),vector < double > (3,0));
 
+    test_Atom_class(R,V,F,N);
+    /*
     for (int i = 0; i < N; ++i) {
         for (int dir = 0; dir < 3; ++dir) {
          r_initial[i][dir] = R[i][dir];
@@ -660,6 +695,8 @@ int main(){
     cout << "____________________________________________________________________________________________" << endl;
     cout << "Initialize used time= " << float(time1)/CLOCKS_PER_SEC << " seconds" << endl;
     cout << "Integrator used time= " << float(time2)/CLOCKS_PER_SEC << " seconds" << endl;
+
+    */
 
     return 0;
 }
