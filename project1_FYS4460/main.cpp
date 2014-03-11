@@ -32,7 +32,7 @@ void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,con
 
 void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
 
-void ReadInitialState(string filename, vector <Atom> atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list);
+void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list);
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
@@ -269,7 +269,10 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
 } // end Lennard-Jones
 */
 /*******************************************************************************************************************
- * forces with boxes - currently not working :-)
+ *                                        forces with boxes
+ *  The system is divided into boxes of volume Lcx*Lcy*Lcx, where the box length is divided into rcut - the cutoff-
+ *  lenght of the Lennard-Jones potential where the interaction of to particles is negligible, and therefor we do not
+ *  take it into account. This reduces the calculations on large systems considarably.
  */
 
 
@@ -426,6 +429,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     vector < double > Temperature;
     vector < double > Ekin;
     vector < double > Epot;
+    vector <double> r_msq_t;
 
     double dt = 0.02;
     int tmax = 1000;
@@ -445,20 +449,40 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
+            atoms[i].update_velocity(V[i]);
 
             R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
             R[i][1] = R[i][1] + V[i][1]*dt;
             R[i][2] = R[i][2] + V[i][2]*dt;
+            atoms[i].update_position(R[i]);
 
             // Adjust positions after periodic boundary conditions
-            if (R[i][0] > Lx){R[i][0] = R[i][0] - Lx;}
-            else if (R[i][0] < 0){R[i][0] = R[i][0] + Lx;}
+            if (R[i][0] > Lx){
+                R[i][0] = R[i][0] - Lx;
+                atoms[i].cross_boundary(1,0,0);
+            }
+            else if (R[i][0] < 0){
+                R[i][0] = R[i][0] + Lx;
+                atoms[i].cross_boundary(-1,0,0);
+            }
 
-            if (R[i][1] > Ly){R[i][1] = R[i][1] - Ly;}
-            else if (R[i][1] < 0){R[i][1] = R[i][1] + Ly;}
+            if (R[i][1] > Ly){
+                R[i][1] = R[i][1] - Ly;
+                atoms[i].cross_boundary(0,1,0);
+            }
+            else if (R[i][1] < 0){
+                R[i][1] = R[i][1] + Ly;
+                atoms[i].cross_boundary(0,-1,0);
+            }
 
-            if (R[i][2] > Lz){R[i][2] = R[i][2] - Lz;}
-            else if (R[i][2] < 0){R[i][2] = R[i][2] + Lz;}
+            if (R[i][2] > Lz){
+                R[i][2] = R[i][2] - Lz;
+                atoms[i].cross_boundary(0,0,1);
+            }
+            else if (R[i][2] < 0){
+                R[i][2] = R[i][2] + Lz;
+                atoms[i].cross_boundary(0,0,-1);
+            }
         }
         Ek = 0;
         Ep = 0;
@@ -477,17 +501,29 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);         // Update box-list
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
         write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                          // write to file
-
+        vector <double> r2 (3);
+        vector <double> r0 (0);
+        vector <double> n_crossings (3);
+        double tmp = 0;
         for (int i = 0; i < N; ++i) {
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
-
+            atoms[i].update_velocity(V[i]);
+            atoms[i].update_force(F[i]);
+            atoms[i].update_potential(U[i]);
+            r2 = atoms[i].return_distance_traveled();
+            r0 = atoms[i].return_initial_position();
+            n_crossings = atoms[i].return_n_crossings();
+            for (int ijk = 0; ijk < 3; ++ijk) {
+                r2[ijk] = r2[ijk]*n_crossings[ijk];
+                tmp += r2[ijk]*r2[ijk] + r0[ijk]*r0[ijk] -2*r2[ijk]*r0[ijk];
+            }
             Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
             Ep += U[i];
         }
-
-
+        tmp = tmp/N;
+        r_msq_t.push_back(tmp);
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(Ek+Ep);                 // Energy of the system.
         Ekin.push_back(Ek);
@@ -505,7 +541,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
     for (int t = 0; t < tmax; ++t) {
-        ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << endl;
+        ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
 
@@ -634,16 +670,18 @@ int main(){
     vector < list <int> > box_list(N_cells_x*N_cells_y*N_cells_z);
 
     /*******************************************************************************************
-     *                 unittesting with only two particles
+     *              unittesting with only two particles - Atom class
      */
 
     //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
+    //initialize(V,R,N,Nx,Ny,Nz);
+    //test_Atom_class(R,V,F,N);
 
     /*******************************************************************************************
      *  using initialize to generate intial state
      */
 
-    //test_Atom_class(R,V,F,N);
+
 
     string filename = "state0499.txt";   // read this state filename
     int RunFromFile = 1;                 // use filename as initial state
@@ -653,9 +691,6 @@ int main(){
     if (RunFromFile != 0){
         time3 = clock();
         ReadInitialState(filename,atoms,R,V,F,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);
-        for (int p = 0; p < N; ++p) {
-            cout << R[p][0] << " " << R[p][1] << R[p][2] << endl;
-        }
         time3 = clock()-time3;
         t3 = double(time3)/CLOCKS_PER_SEC;
         cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
@@ -695,11 +730,10 @@ int main(){
 
 
 
-
-
 void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
     double up = 0.01;
     vector < Atom > atoms;
+    F = vector < vector <double> > (R.size(),vector <double> (3,0));
     for (int p = 0; p < N; ++p) {
         Atom argon(R[p],V[p],F[p],up);
         atoms.push_back(argon);
@@ -717,7 +751,7 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
 
     vector < double > dist = atoms[0].return_distance_traveled();
     vector < double > number_of_crossings = atoms[0].return_n_crossings();
-    vector < double > r0 = atoms[0].get_initial_position();
+    vector < double > r0 = atoms[0].return_initial_position();
 
     cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
     cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
@@ -730,16 +764,20 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
         R[atom][0] = -0.01 + R[atom][0];
         R[atom][1] = 3.14 + R[atom][1];
         R[atom][2] = 0 + R[atom][2];
+        V[atom][0] += 0.12;
+        V[atom][1] += -0.2;
+        V[atom][2] += -0.1;
     }
     for (int atom = 0; atom < N; ++atom) {
         atoms[atom].update_position(R[atom]);
+        atoms[atom].update_velocity(V[atom]);
         atoms[atom].cross_boundary(0,0,0);
         atoms[atom].cross_boundary(-1,1,1);
     }
 
     dist = atoms[0].return_distance_traveled();
     number_of_crossings = atoms[0].return_n_crossings();
-    r0 = atoms[0].get_initial_position();
+    r0 = atoms[0].return_initial_position();
 
     vector <double> pos = atoms[0].position();
 
@@ -749,10 +787,13 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
     cout << pos[0] << " " << pos[1] << " " << pos[2] << endl;
     cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
     cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
+    //cout << position[] << " " << position[1] << " " << position[2] << "  " << endl;
     cout << "------------------------------------------------------------------------" << endl;
+
+
 }
 
-void ReadInitialState(string filename, vector <Atom> atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list){
+void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list){
 /* Read inital state from filename and return positions R, velocities V
  */
 

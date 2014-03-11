@@ -16,7 +16,7 @@ public:
     vector <double> position();
     vector <double> velocity();
     vector <double> force();
-    vector <double> get_initial_position();
+    vector <double> return_initial_position();
     double get_potential();
     void cross_boundary(int i, int j , int k);
     vector <double> return_n_crossings();
@@ -27,10 +27,10 @@ private:
     vector <double> r;            // position of atom
     vector <double> v;            // velocity
     vector <double> f;            // total force felt from other particles
-    vector <double> r0;     // initial position
+    vector <double> r0;           // initial position
     double u;                     // total potential
-    vector <double> n_crossings ;
-    vector <double> dist;
+    vector <double> n_crossings ; // number of crossings out of the system (+1 pos dir, -1 neg dir.)
+    vector <double> dist;         // distance traveled.
     int N;
 
 };

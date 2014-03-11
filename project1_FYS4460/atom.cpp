@@ -12,14 +12,17 @@
 
 
 Atom::Atom(vector < double > r_, vector < double > v_, vector < double > f_, double u_){
+    // construct the Atom object that holds the r,v,f,u,n_crossings,dist and initial position r0.
+
+    dist = vector <double> (3);
+    n_crossings = vector <double> (3);
+    N = 0;
+    u = u_;
     r = r_;
     v = v_;
     f = f_;
-    u = u_;
-    r0 = r_;
-    dist = vector <double> (3,0);
-    n_crossings = vector <double> (3,0);
-    N = 0;
+    r0 = r;
+
 }
 
 void Atom::cross_boundary(int i, int j, int k){
@@ -36,9 +39,9 @@ vector < double > Atom::return_n_crossings(){
 }
 
 vector < double > Atom::return_distance_traveled(){
-    dist[0] = dist[0]/N;
-    dist[1] = dist[1]/N;
-    dist[2] = dist[2]/N;
+    dist[0] = dist[0];
+    dist[1] = dist[1];
+    dist[2] = dist[2];
     return dist;
 }
 
@@ -46,18 +49,23 @@ void Atom::distance_traveled(vector<double> r){
     dist[0] += r[0] - r0[0];
     dist[1] += r[1] - r0[1];
     dist[2] += r[2] - r0[2];
-    N += 1;
 }
 
 void Atom::update_position(vector <double> r_){
-    r = r_;
+    for (int i = 0; i < 3; ++i) {
+        r[i] = r_[i];
+    }
     distance_traveled(r);
 }
 void Atom::update_velocity(vector <double> v_){
-    v = v_;
+    for (int i = 0; i < 3; ++i) {
+        v[i] = v_[i];
+    }
 }
 void Atom::update_force(vector <double> f_){
-    f = f_;
+    for (int i = 0; i < 3; ++i) {
+        f[i] = f_[i];
+    }
 }
 void Atom::update_potential(double u_){
     u = u_;
@@ -73,7 +81,7 @@ vector < double > Atom::velocity(){
 vector < double > Atom::force(){
     return f;
 }
-vector < double > Atom::get_initial_position(){
+vector < double > Atom::return_initial_position(){
     return r0;
 }
 
