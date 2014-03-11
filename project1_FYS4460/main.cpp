@@ -32,8 +32,7 @@ void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,con
 
 void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
 
-void ReadInitialState(string filename, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, int &N);
-
+void ReadInitialState(string filename, vector <Atom> atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list);
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
@@ -137,7 +136,7 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
  *                    Initialize state
  * ******************************************************************************
  */
-void initialize(vector < vector < double > > &V, vector < vector < double > > &R, int &N, int Nx, int Ny, int Nz){
+void initialize(vector < vector <double> > &V, vector < vector <double> > &R, int &N, int Nx, int Ny, int Nz){
 
     /*   Initialize system:
      * - initial particle positions   - fcc
@@ -252,7 +251,7 @@ void initialize(vector < vector < double > > &V, vector < vector < double > > &R
  *                                         BOX-calculation
  ** ******************************************************************************************************
  */
-void Lennard_Jones(vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double &P_sum){
+void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double &P_sum){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      * One box-calculation - calulating the contribution from every particle in the system.
      *
@@ -415,7 +414,7 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
  *                                  INTEGRATOR
  * *********************************************************************************************************************
  */
-void integrator(vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list){
+void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -476,7 +475,7 @@ void integrator(vector < vector <double> > &V,vector < vector <double> > &R, vec
         }
 
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);         // Update box-list
-        Lennard_Jones(F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
+        Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
         write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                          // write to file
 
         for (int i = 0; i < N; ++i) {
@@ -600,7 +599,9 @@ int main(){
     // create a vector within a vector, using including the <vector> library.
     vector < vector < double > > R; // positions
     vector < vector < double > > V; // velocities
-    vector < vector < double > > F; // Force
+    vector < vector < double > > F; // Force on particle
+    vector < Atom > atoms;          // atom holds information about particle
+    vector <double> U;              // Potential energy for particle
     int N;
     int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
@@ -630,7 +631,7 @@ int main(){
     Lcy = Ly/N_cells_y;
     Lcz = Lz/N_cells_z;
 
-    vector < list < int > > box_list(N_cells_x*N_cells_y*N_cells_z);
+    vector < list <int> > box_list(N_cells_x*N_cells_y*N_cells_z);
 
     /*******************************************************************************************
      *                 unittesting with only two particles
@@ -651,7 +652,7 @@ int main(){
 
     if (RunFromFile != 0){
         time3 = clock();
-        ReadInitialState(filename,R,V,F,N);
+        ReadInitialState(filename,atoms,R,V,F,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list);
         for (int p = 0; p < N; ++p) {
             cout << R[p][0] << " " << R[p][1] << R[p][2] << endl;
         }
@@ -664,16 +665,17 @@ int main(){
         time1 = clock();
 
         initialize(V,R,N,Nx,Ny,Nz);
+        initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
+
         F = vector < vector <double> > (R.size(),vector <double> (3,0));
         time1 = clock() - time1;
         t1 = float(time1)/CLOCKS_PER_SEC;
         cout << "Initialize used time= " << t1 << " seconds" << endl;
     }
 
-    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
 
     time2 = clock();
-    integrator(V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    integrator(atoms,V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time2 = clock() - time2;
 
     cout << "____________________________________________________________________________________________" << endl;
@@ -750,7 +752,7 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
     cout << "------------------------------------------------------------------------" << endl;
 }
 
-void ReadInitialState(string filename, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, int &N){
+void ReadInitialState(string filename, vector <Atom> atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list){
 /* Read inital state from filename and return positions R, velocities V
  */
 
@@ -803,6 +805,24 @@ void ReadInitialState(string filename, vector < vector < double > > &R, vector <
         //  myfile.ignore(999, '\n'); // ignore characters untill u find \n, max 999 characters.
     }
 
-
     myfile.close();
+    double P_sum;
+    double Lcx = Lx/N_cells_x;
+    double Lcy = Ly/N_cells_y;
+    double Lcz = Lz/N_cells_z;
+    // endsure that the total length of the cells equals the length dimentions of the box.
+    N_cells_x = Lx/Lcx;
+    N_cells_y = Ly/Lcy;
+    N_cells_z = Lz/Lcz;
+    Lcx = Lx/N_cells_x;
+    Lcy = Ly/N_cells_y;
+    Lcz = Lz/N_cells_z;
+    U = vector <double> (R.size());
+    initialize_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);
+    Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);
+
+    for (int atom = 0; atom < N; ++atom) {
+        Atom argon(R[atom],V[atom],F[atom],U[atom]);
+        atoms.push_back(argon);
+    }
 }
