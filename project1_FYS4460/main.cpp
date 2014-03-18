@@ -39,7 +39,7 @@ void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < d
  */
 // Check out the constants, do they fit with those in the project text?
 double b = 5.260;                 // Ångstrøm [Å]
-//double b = 20.0;                // Ångsrøm [Å]
+//double b = 30.0;                  // Ångsrøm [Å]
 double mA = 39.948;               // mass of Argon [amu]
 double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 double eps = 0.01*1.0318;         // Energy constant [eV]
@@ -502,7 +502,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
         write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                          // write to file
         vector <double> r2 (3);
-        vector <double> r0 (0);
+        vector <double> r0 (3);
         vector <double> n_crossings (3);
         double tmp = 0;
         for (int i = 0; i < N; ++i) {
@@ -512,12 +512,13 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             atoms[i].update_velocity(V[i]);
             atoms[i].update_force(F[i]);
             atoms[i].update_potential(U[i]);
-            r2 = atoms[i].return_distance_traveled();
+
+            r2 = atoms[i].position();
             r0 = atoms[i].return_initial_position();
             n_crossings = atoms[i].return_n_crossings();
+
             for (int ijk = 0; ijk < 3; ++ijk) {
-                r2[ijk] = r2[ijk]*n_crossings[ijk];
-                tmp += r2[ijk]*r2[ijk] + r0[ijk]*r0[ijk] -2*r2[ijk]*r0[ijk];
+                tmp += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
             }
             Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
             Ep += U[i];
@@ -541,6 +542,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
     for (int t = 0; t < tmax; ++t) {
+        //ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << endl;
         ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
@@ -676,15 +678,11 @@ int main(){
     //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
     //initialize(V,R,N,Nx,Ny,Nz);
     //test_Atom_class(R,V,F,N);
+    //******************************************************************************************
 
-    /*******************************************************************************************
-     *  using initialize to generate intial state
-     */
+    string filename = "state0999.txt";   // read this state filename
+    int RunFromFile = 0;                 // use filename as initial state
 
-
-
-    string filename = "state0499.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state
     clock_t time1, time2, time3;
     double t1,t2,t3;
 
@@ -706,6 +704,10 @@ int main(){
         time1 = clock() - time1;
         t1 = float(time1)/CLOCKS_PER_SEC;
         cout << "Initialize used time= " << t1 << " seconds" << endl;
+        for (int atom = 0; atom < R.size(); ++atom) {
+            Atom argon(R[atom],V[atom],F[atom],0.0);
+            atoms.push_back(argon);
+        }
     }
 
 
@@ -749,7 +751,7 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
         atoms[atom].cross_boundary(-1,1,1);
     }
 
-    vector < double > dist = atoms[0].return_distance_traveled();
+    //vector < double > dist = atoms[0].return_distance_traveled();
     vector < double > number_of_crossings = atoms[0].return_n_crossings();
     vector < double > r0 = atoms[0].return_initial_position();
 
@@ -757,7 +759,6 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
     cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
     cout <<  R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << endl;
     cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
-    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
     cout << "------------------------------------------------------------------------" << endl;
 
     for (int atom = 0; atom < N; ++atom) {
@@ -775,7 +776,6 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
         atoms[atom].cross_boundary(-1,1,1);
     }
 
-    dist = atoms[0].return_distance_traveled();
     number_of_crossings = atoms[0].return_n_crossings();
     r0 = atoms[0].return_initial_position();
 
@@ -786,7 +786,6 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
     cout << R[0][0] << " " << R[0][1] << " " << R[0][2] << endl;
     cout << pos[0] << " " << pos[1] << " " << pos[2] << endl;
     cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
-    cout << dist[0] << " " << dist[1] << " " << dist[2] << endl;
     //cout << position[] << " " << position[1] << " " << position[2] << "  " << endl;
     cout << "------------------------------------------------------------------------" << endl;
 

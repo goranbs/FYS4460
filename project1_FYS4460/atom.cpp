@@ -38,24 +38,11 @@ vector < double > Atom::return_n_crossings(){
     return n_crossings;
 }
 
-vector < double > Atom::return_distance_traveled(){
-    dist[0] = dist[0];
-    dist[1] = dist[1];
-    dist[2] = dist[2];
-    return dist;
-}
-
-void Atom::distance_traveled(vector<double> r){
-    dist[0] += r[0] - r0[0];
-    dist[1] += r[1] - r0[1];
-    dist[2] += r[2] - r0[2];
-}
 
 void Atom::update_position(vector <double> r_){
     for (int i = 0; i < 3; ++i) {
         r[i] = r_[i];
     }
-    distance_traveled(r);
 }
 void Atom::update_velocity(vector <double> v_){
     for (int i = 0; i < 3; ++i) {

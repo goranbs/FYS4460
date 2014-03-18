@@ -20,10 +20,8 @@ public:
     double get_potential();
     void cross_boundary(int i, int j , int k);
     vector <double> return_n_crossings();
-    vector <double> return_distance_traveled();
 
 private:
-    void distance_traveled(vector <double> r);
     vector <double> r;            // position of atom
     vector <double> v;            // velocity
     vector <double> f;            // total force felt from other particles
