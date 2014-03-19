@@ -925,7 +925,7 @@ double Berendsen(double tau, double dt, double T_bath, double T){
     return gamma;
 }
 
-void Andersen(double tau, double dt, double T_bath, double T){
+double Andersen(){
     /*****************************************************************************
      * The Andersen thermostat simulates hard collisions between atoms insid the system
      * and in the heat bath. Atoms which collide will gain a new normally distributed
@@ -934,8 +934,16 @@ void Andersen(double tau, double dt, double T_bath, double T){
      *
      * Usefull when equilibrating systems, but disturbs the dynamics of e.g. lattice vibrations.
      */
-    double kappa = tau*dt*T_bath*T;
+    double gamma = 1;
+    double dt = 0.02;
+    double tau = 20*dt;
 
+    double P = dt/tau;
+    double rand1 = rand()/double(RAND_MAX);
+
+    if (rand1 > P) {
+        gamma = random_number();
+    }
 
 }
 
