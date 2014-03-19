@@ -36,7 +36,7 @@ void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < d
 
 double Berendsen(double tau, double dt, double T_bath, double T);
 
-void Andersen(double tau, double dt, double T_bath, double T);
+void Andersen(double tau, double dt, double T_bath, vector < vector <double> > &V, vector <Atom> atoms);
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
@@ -566,6 +566,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         Pressure.push_back(Press);                 // Pressure
 
         gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
+        //Andersen(tau, dt, T_bath, V, atoms);
+
         cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
@@ -925,7 +927,7 @@ double Berendsen(double tau, double dt, double T_bath, double T){
     return gamma;
 }
 
-double Andersen(){
+void Andersen(double tau, double dt, double T_bath, vector<vector<double> > &V, vector<Atom> atoms){
     /*****************************************************************************
      * The Andersen thermostat simulates hard collisions between atoms insid the system
      * and in the heat bath. Atoms which collide will gain a new normally distributed
@@ -935,14 +937,17 @@ double Andersen(){
      * Usefull when equilibrating systems, but disturbs the dynamics of e.g. lattice vibrations.
      */
     double gamma = 1;
-    double dt = 0.02;
-    double tau = 20*dt;
-
+    double vel;
     double P = dt/tau;
-    double rand1 = rand()/double(RAND_MAX);
+    for (int p = 0; p < V.size(); ++p) {
+        double rand1 = rand()/double(RAND_MAX);
 
-    if (rand1 > P) {
-        gamma = random_number();
+        if (rand1 > P) {
+            vel = V[p][0]*V[p][0] + V[p][1]*V[p][1] + V[p][2]*V[p][2];
+            gamma = sqrt(1/(2*pi*T_bath))*exp(-(vel*vel/(2*T_bath)));
+        }
+        for (int i = 0; i < 3; ++i) V[p][i] = gamma*random_number();
+        atoms[p].update_velocity(V[p]);
     }
 
 }

@@ -1,7 +1,8 @@
 '''
                     PlotEnergy.py - project1_FYS4460
 
-Should read output files from the MD program in FYS4460.
+Should read output files from the MD program in FYS4460 - Unsorted Systems and Percolation
+calculate mean velocity distribution and compare with a Maxwell-Boltzmann distribution. 
 '''
 
 import numpy as np
@@ -56,4 +57,14 @@ plt.title('Energy of system')
 plt.xlabel('unitless time')
 plt.ylabel('unitless energy')
 plt.legend('E(t)')
-plt.show(True)
+
+import matplotlib.pyplot as plt
+
+plt.figure()
+hist, bins = np.histogram(z,bins=50)
+width = 0.7*(bins[1]-bins[0])
+center = (bins[:-1] + bins[1:])/2.0
+plt.bar(center,hist,align='center',width=width)
+plt.title('Boltzmann distribution')
+plt.xlabel('velocity')
+plt.ylabel('number of values')
