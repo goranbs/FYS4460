@@ -1,11 +1,13 @@
 #include <iostream>
 #include <iomanip>
+#include <stdio.h>         // NULL, printf, scanf, putf
+#include <stdlib.h>        // srand(), rand()
 #include <time.h>
 #include <fstream>
 //#include <lib.h>
 #include <vector>
 #include <cmath>
-#include <random>
+//#include <random>
 #include <unitconverter.h>
 #include <list>
 #include <algorithm>        //
@@ -17,8 +19,6 @@
 
 using namespace std;
 //using namespace arma;
-
-const double pi = 4*atan(1);
 
 /**********************************************************************************************************
  *             FUNCTION DECLARATIONS
@@ -33,19 +33,26 @@ void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,con
 void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
 
 void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list);
+
+double Berendsen(double tau, double dt, double T_bath, double T);
+
+void Andersen(double tau, double dt, double T_bath, double T);
 /**********************************************************************************************************
  *             CONSTANTS
  **********************************************************************************************************
  */
 // Check out the constants, do they fit with those in the project text?
-double b = 5.260;                 // Ångstrøm [Å]
-//double b = 30.0;                  // Ångsrøm [Å]
-double mA = 39.948;               // mass of Argon [amu]
-double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
-double eps = 0.01*1.0318;         // Energy constant [eV]
-double Temp = 100.0;              // Kelvin, initial temperature
-double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
-double P_0 = 1.60217657*pow(10,11.0)/(b*b*b); // [N/m^2] Pressure
+
+const double pi = 4*atan(1);
+
+const double b = 5.260;                 // Ångstrøm [Å]
+//const double b = 30.0;                  // Ångsrøm [Å]
+const double mA = 39.948;               // mass of Argon [amu]
+const double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
+const double eps = 0.01*1.0318;         // Energy constant [eV]
+const double Temp = 100.0;              // Kelvin, initial temperature
+const double sigma = 3.405;             // Ångstrøm, scalefactor - Leonard-Jones
+const double P_0 = 1.60217657*pow(10,11.0)/(b*b*b); // [N/m^2] Pressure
 /**********************************************************************************************************
  * Conversion factors, so that we get out units that we would like to use
  */
@@ -79,6 +86,10 @@ double random_number(){
      *                Box-Muller transform
      * Standard deviation of the distribution std = sqrt(kB*T/m)
      */
+
+    // srand (1);
+    // srand (time(NULL))
+
     double U1 = rand()/float(RAND_MAX);
     double U2 = rand()/float(RAND_MAX);
     double val = sqrt(-2*log(U1))*cos(2*pi*U2);
@@ -430,13 +441,21 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     vector < double > Ekin;
     vector < double > Epot;
     vector <double> r_msq_t;
+    vector < vector <double> > mean_disp (R.size(),vector <double> (3,0.0));
 
     double dt = 0.02;
     int tmax = 1000;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
+    double gamma,tau,T_bath;
     E_mean_system = 0;
     E_quad = 0;
+
+    T_bath = 150/T_0;  // Heat bath at 150 degrees K,
+    //tau = 1*dt;
+    //tau = 10*dt;
+    tau = 20*dt;
+    gamma = 1.0;
 
     vector < double > Time_vec ;
     vector < double > Pressure ;
@@ -504,11 +523,13 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         vector <double> r2 (3);
         vector <double> r0 (3);
         vector <double> n_crossings (3);
-        double tmp = 0;
+
         for (int i = 0; i < N; ++i) {
-            V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // then find the velocities at time (t+dt)
-            V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
-            V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
+
+            V[i][0] = gamma*(V[i][0] + F[i][0]*dt/(2*m));   // then find the velocities at time (t+dt)
+            V[i][1] = gamma*(V[i][1] + F[i][1]*dt/(2*m));
+            V[i][2] = gamma*(V[i][2] + F[i][2]*dt/(2*m));
+
             atoms[i].update_velocity(V[i]);
             atoms[i].update_force(F[i]);
             atoms[i].update_potential(U[i]);
@@ -518,13 +539,23 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             n_crossings = atoms[i].return_n_crossings();
 
             for (int ijk = 0; ijk < 3; ++ijk) {
-                tmp += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
+                mean_disp[i][ijk] += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
             }
+
             Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
             Ep += U[i];
         }
-        tmp = tmp/N;
-        r_msq_t.push_back(tmp);
+        double rmsq = 0;
+        for (int i = 0; i < N; ++i) {
+            for (int ijk = 0; ijk < 3; ++ijk) {
+                rmsq += mean_disp[i][ijk];
+            }
+        }
+
+
+
+        rmsq = rmsq/N;
+        r_msq_t.push_back(rmsq);
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(Ek+Ep);                 // Energy of the system.
         Ekin.push_back(Ek);
@@ -533,6 +564,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         Temperature.push_back(tempi);              // Temperature
         double Press = (N*tempi + P_sum/3);        // Pressure
         Pressure.push_back(Press);                 // Pressure
+
+        gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
         cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
         //cout << "Total enegy of the system= " << E_tot_system << " at time t= " << t*dt/Time_0 << endl;
     }
@@ -542,8 +575,9 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
     for (int t = 0; t < tmax; ++t) {
-        //ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << endl;
-        ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
+        // MD units:
+        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << endl;
+        //ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
 
@@ -574,6 +608,7 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
     vector < vector < double > > R (2,vector < double > (3,0));
     vector < vector < double > > V (2,vector < double > (3,0));
     vector < vector <double> > F (R.size(), vector <double> (3,0));
+    vector < Atom > atoms;
 
     InitialState twoparts;
     twoparts.two_particles(R,V,Lx,Ly,Lz);
@@ -591,9 +626,15 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
     initialize_box_list(Lcx,Lcy,Lcz,3,3,3,R,box_list);
 
+    for (int p = 0; p < 2; ++p) {
+        Atom argon(R[p],V[p],F[p],0.0);
+        atoms.push_back(argon);
+    }
+
     clock_t time3;
     time3 = clock();
-    //ntegrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    //integrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    integrator(atoms,V,R,F,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time3 = clock() - time3;
 
     cout << "two particles" << endl;
@@ -651,6 +692,7 @@ int main(){
     Ly = Ny*length;
     Lz = Nz*length;
 
+
     // Cells
     double Lcx,Lcy,Lcz; // length of cell
     int N_cells_x,N_cells_y,N_cells_z;        // number of cells
@@ -679,6 +721,7 @@ int main(){
     //initialize(V,R,N,Nx,Ny,Nz);
     //test_Atom_class(R,V,F,N);
     //******************************************************************************************
+
 
     string filename = "state0999.txt";   // read this state filename
     int RunFromFile = 0;                 // use filename as initial state
@@ -715,8 +758,8 @@ int main(){
     integrator(atoms,V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
     time2 = clock() - time2;
 
-    cout << "____________________________________________________________________________________________" << endl;
-    cout << "Unitless; mass= " << m << " Energy= " << E << " Temperature= " << Temp/T_0 << " Length= " << length << endl;
+    //cout << "____________________________________________________________________________________________" << endl;
+    //cout << "Unitless; mass= " << m << " Energy= " << E << " Temperature= " << Temp/T_0 << " Length= " << length << endl;
     cout << "____________________________________________________________________________________________" << endl;
     if (RunFromFile != 0) cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
     else cout << "Initialize used time= " << t1 << " seconds" << endl;
@@ -866,3 +909,34 @@ void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < d
         atoms.push_back(argon);
     }
 }
+
+
+double Berendsen(double tau, double dt, double T_bath, double T){
+    /******************************************************************************
+     * Berendsen thermostat lets the system temperature increase to a temprature T_bath from
+     * the system temperature T over a relaxationstime tau.
+     * For each timestep, the velocities of the particles in the system is increased by a factor
+     *                           vi = gamma*vi_
+     */
+
+    double gamma;
+    gamma = sqrt(1 + dt/tau*(T_bath/T -1));
+
+    return gamma;
+}
+
+void Andersen(double tau, double dt, double T_bath, double T){
+    /*****************************************************************************
+     * The Andersen thermostat simulates hard collisions between atoms insid the system
+     * and in the heat bath. Atoms which collide will gain a new normally distributed
+     * velocity with standard deviation
+     *                                      sqrt(kB*T_bath/m)
+     *
+     * Usefull when equilibrating systems, but disturbs the dynamics of e.g. lattice vibrations.
+     */
+    double kappa = tau*dt*T_bath*T;
+
+
+}
+
+

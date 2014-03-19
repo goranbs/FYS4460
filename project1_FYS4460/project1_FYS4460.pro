@@ -8,7 +8,8 @@ SOURCES += main.cpp \
     unitconverter.cpp \
     cell.cpp \
     initialstate.cpp \
-    atom.cpp
+    atom.cpp \
+    thermostat.cpp
 
 #LIBS += -larmadillo -lblas -llapack
 
