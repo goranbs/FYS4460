@@ -26,7 +26,7 @@ using namespace std;
  */
 void write_to_file(const vector<vector<double> > &R,const vector<vector<double> > &V,const vector<vector<double> > &F,const vector<list<int> > &box_list, const string &filename, int N,double t);
 
-void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list);
+void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list, double T_bath);
 
 void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
 
@@ -78,10 +78,9 @@ double velocity = sigma/Time_0;          // Conversion factor velocity
 
 /********************************************************************************
  *                    Random Number Generator
- * ******************************************************************************
- */
+ * *****************************************************************************/
 double random_number(){
-    /****************************************************************************
+    /*
      *  Random number generator - Bolzmann distribution
      *                Box-Muller transform
      * Standard deviation of the distribution std = sqrt(kB*T/m)
@@ -99,8 +98,7 @@ double random_number(){
 
 /********************************************************************************
  *                    Initialize Box List
- * ******************************************************************************
- */
+ * *****************************************************************************/
 void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, int nz, vector < vector < double > > &R, vector < list < int > > &box_list){
     /* function that creates the box_list
      */
@@ -119,8 +117,7 @@ void initialize_box_list(double Lcx, double Lcy, double Lcz , int nx, int ny, in
 
 /********************************************************************************
  *                    Update Box List
- * ******************************************************************************
- */
+ * *****************************************************************************/
 void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz, vector < vector < double > > &R,vector < list < int > > &box_list){
     /* Function that updates the box list :-) - that is, it puts the particle into the box it belongs to:-)
      */
@@ -143,10 +140,9 @@ void update_box_list(double Lcx, double Lcy, double Lcz, int nx, int ny, int nz,
     }
 }
 
-/********************************************************************************
- *                    Initialize state
- * ******************************************************************************
- */
+/**********************************************************************************************************************************
+ *                               Initialize state
+ * ********************************************************************************************************************************/
 void initialize(vector < vector <double> > &V, vector < vector <double> > &R, int &N, int Nx, int Ny, int Nz){
 
     /*   Initialize system:
@@ -168,9 +164,7 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
 
     /*****************************************************************************
-     *               Initial positions and velocities
-     */
-
+     *               Initial positions and velocities                            */
     natom = 0;
     for (int ix=0; ix < Nx; ++ix) {
         for (int iy=0; iy < Ny; ++iy){
@@ -208,8 +202,7 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
 
     /*********************************************************************************************
      *                     Write initial conditions to file
-     * string filename = "state000.xyz", open file and write initial postions and velocities;
-     */
+     * string filename = "state000.xyz", open file and write initial postions and velocities;    */
 
     double sum_v_x = 0;
     double sum_v_y = 0;
@@ -260,8 +253,7 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
 /* ******************************************************************************************************
  *                                          LENNARD-JONES
  *                                         BOX-calculation
- ** ******************************************************************************************************
- */
+ ** *****************************************************************************************************/
 void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double &P_sum){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      * One box-calculation - calulating the contribution from every particle in the system.
@@ -285,7 +277,6 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
  *  lenght of the Lennard-Jones potential where the interaction of to particles is negligible, and therefor we do not
  *  take it into account. This reduces the calculations on large systems considarably.
  */
-
 
     vector < vector < int > > list_of_neighbours_to_calculate_for_each_box (N_cells_x*N_cells_y*N_cells_z);
     vector < int >  list_of_visited_boxes;
@@ -371,9 +362,7 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
 
 /********************************************************************************************************
  *                              CALCULATE FORCES
- * ******************************************************************************************************
- */
-
+ * *****************************************************************************************************/
 vector < double > fij (3);
 vector < double > r_ij (3);
 void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
@@ -416,7 +405,7 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
     F[j][2] = F[j][2] - fij[2];
 
     U[i] += 4*(r12i - r6i); // the potential energy for particle i in j's presence.
-    //U[j] += U[i];           // potential energy for j in i's presence. If we add this, the potential energy becomes too large, why?
+    U[j] += 4*(r12i - r6i); // potential energy for j in i's presence.
 
     if (i < j){ // just to be sure :-)
          Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
@@ -425,10 +414,9 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
 
 
 /***********************************************************************************************************************
- *                                  INTEGRATOR
- * *********************************************************************************************************************
- */
-void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list){
+ *                                              INTEGRATOR
+ * ********************************************************************************************************************/
+void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list,double T_bath){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -447,11 +435,11 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     int tmax = 1000;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
-    double gamma,tau,T_bath;
+    double gamma,tau;
     E_mean_system = 0;
     E_quad = 0;
 
-    T_bath = 150/T_0;  // Heat bath at 150 degrees K,
+    T_bath = T_bath/T_0;  // Heat bath at 150 degrees K,
     //tau = 1*dt;
     //tau = 10*dt;
     tau = 20*dt;
@@ -553,7 +541,6 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         }
 
 
-
         rmsq = rmsq/N;
         r_msq_t.push_back(rmsq);
         Time_vec.push_back(t*dt/Time_0);           // [fs]
@@ -602,10 +589,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
 
 /*******************************************************************************************************************************
  *                                        Test with 2 particles
- * *****************************************************************************************************************************
- */
-
-void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,int N_cells_z, vector < list < int > > box_list){
+ * ****************************************************************************************************************************/
+void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,int N_cells_z, vector < list < int > > box_list,double T_bath){
 
     vector < vector < double > > R (2,vector < double > (3,0));
     vector < vector < double > > V (2,vector < double > (3,0));
@@ -635,8 +620,8 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
 
     clock_t time3;
     time3 = clock();
-    //integrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
-    integrator(atoms,V,R,F,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
+    //integrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
+    integrator(atoms,V,R,F,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
     time3 = clock() - time3;
 
     cout << "two particles" << endl;
@@ -673,8 +658,7 @@ void write_to_file(const vector < vector < double > > &R, const vector < vector 
 
 /*******************************************************************************************************************
  *                                                MAIN
- * *****************************************************************************************************************
- */
+ * ****************************************************************************************************************/
 int main(){
 
     // create a vector within a vector, using including the <vector> library.
@@ -683,10 +667,25 @@ int main(){
     vector < vector < double > > F; // Force on particle
     vector < Atom > atoms;          // atom holds information about particle
     vector <double> U;              // Potential energy for particle
+
     int N;
     int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
-    int kappa = 5;
+    int kappa = 8;     //
+    double r_cut;      // cutoff lenght
+    double density;    // density of system
+
+    // Cells
+    double Lcx,Lcy,Lcz;                            // length of cell
+    int N_boxes, N_cells_x,N_cells_y,N_cells_z;    // number of cells and number of boxes in total.
+
+    // T_bath - Temperature of external heat bath
+    double T_bath;
+    T_bath = 150;   // this is in Kelvin !!!!!
+
+    string filename = "state0999.txt";   // read this state filename
+    int RunFromFile = 0;                 // use filename as initial state
+
     Nx = kappa;
     Ny = kappa;
     Nz = kappa;
@@ -694,42 +693,34 @@ int main(){
     Ly = Ny*length;
     Lz = Nz*length;
 
+    r_cut = 3;           // cutoff length for when we assume the Lennard Jones interaction is negligible
 
-    // Cells
-    double Lcx,Lcy,Lcz; // length of cell
-    int N_cells_x,N_cells_y,N_cells_z;        // number of cells
-    N_cells_x = N_cells_y = N_cells_z = 3;
-    int N_boxes;
-    N_boxes = int(N_cells_x*N_cells_y*N_cells_z);
-
-    Lcx = Lx/N_cells_x;
-    Lcy = Ly/N_cells_y;
-    Lcz = Lz/N_cells_z;
-    // endsure that the total length of the cells equals the length dimentions of the box.
+    Lcx = r_cut;
+    Lcy = r_cut;
+    Lcz = r_cut;
+                         // ensure that the total length of the cells equals the length dimentions of the box.
     N_cells_x = Lx/Lcx;
     N_cells_y = Ly/Lcy;
     N_cells_z = Lz/Lcz;
     Lcx = Lx/N_cells_x;
     Lcy = Ly/N_cells_y;
     Lcz = Lz/N_cells_z;
+    N_boxes = int(N_cells_x*N_cells_y*N_cells_z);
 
-    vector < list <int> > box_list(N_cells_x*N_cells_y*N_cells_z);
+    clock_t time1, time2, time3;
+    double t1,t2,t3;
+
+    vector < list <int> > box_list(N_boxes);
 
     /*******************************************************************************************
      *              unittesting with only two particles - Atom class
      */
 
-    //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list);
+    //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list,T_bath);
     //initialize(V,R,N,Nx,Ny,Nz);
     //test_Atom_class(R,V,F,N);
     //******************************************************************************************
 
-
-    string filename = "state0999.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state
-
-    clock_t time1, time2, time3;
-    double t1,t2,t3;
 
     if (RunFromFile != 0){
         time3 = clock();
@@ -757,26 +748,26 @@ int main(){
 
 
     time2 = clock();
-    integrator(atoms,V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list);
-    time2 = clock() - time2;
-
-    //cout << "____________________________________________________________________________________________" << endl;
-    //cout << "Unitless; mass= " << m << " Energy= " << E << " Temperature= " << Temp/T_0 << " Length= " << length << endl;
+    integrator(atoms,V,R,F,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
+    t2 = clock() - time2;
+    /**************************************************************************************************************
+     *                                               OUTPUTS                                                      */
     cout << "____________________________________________________________________________________________" << endl;
     if (RunFromFile != 0) cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
     else cout << "Initialize used time= " << t1 << " seconds" << endl;
-    cout << "Integrator used time= " << double(time2)/CLOCKS_PER_SEC << " seconds" << endl;
-
-
+    cout << "Integrator used time= " << double(t2)/CLOCKS_PER_SEC << " seconds" << endl;
+    cout << "____________________________________________________________________________________________" << endl;
+    cout << "#Particles = " << N << " #Boxes =" << N_boxes << endl;
+    cout << "System density= " << N/(Lx*Ly*Lz) << " system volume = " << Lx*Ly*Lz << " T_bath= " << T_bath/T_0 << endl;
+    cout << "____________________________________________________________________________________________" << endl;
     return 0;
 }
 
 
 
-
-
-
-
+/*******************************************************************************************************************
+ *                                    TEST ATOM CLASS
+ * ****************************************************************************************************************/
 void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
     double up = 0.01;
     vector < Atom > atoms;
@@ -837,20 +828,22 @@ void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V
 
 }
 
-void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list){
-/* Read inital state from filename and return positions R, velocities V
+/*******************************************************************************************************************
+ *                                     READ INITIAL STATE
+ * *****************************************************************************************************************
  */
-
+void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &V, vector < vector <double> > &F, vector <double> &U, int &N,double Lx,double Ly,double Lz, int N_cells_x,int N_cells_y,int N_cells_z,vector <list <int> > box_list){
+/*                   Read inital state from filename and return positions R, velocities V
+ */
     ifstream myfile;
     myfile.open(filename.c_str());
 
-    string line, firstline,secondline;
+    string firstline,secondline;
     //getline(myfile,firstline);
     myfile >> N;
     getline(myfile,firstline);
     getline(myfile,secondline);
-    //cout << "Hello firstline= " << firstline << endl;
-    //cout << "Hello secondline= " << secondline << endl;
+
     vector <double> r (3);
     vector <double> v (3);
     vector <double> f (3);
@@ -881,12 +874,6 @@ void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < d
         V.push_back(v);
         F.push_back(f);
 
-//        cout << "-----------------------------------" << endl;
-//        cout << r[0] << " " << r[1] << " " << r[2] << endl;
-//        cout << v[0] << " " << v[1] << " " << v[2] << endl;
-//        cout << f[0] << " " << f[1] << " " << f[2] << endl;
-//        cout << box_index << endl;
-
         //  myfile.ignore(999, '\n'); // ignore characters untill u find \n, max 999 characters.
     }
 
@@ -912,7 +899,10 @@ void ReadInitialState(string filename, vector <Atom> &atoms, vector < vector < d
     }
 }
 
-
+/*******************************************************************************************************************
+ *                               BERENDSEN THERMOSTAT
+ * *****************************************************************************************************************
+ */
 double Berendsen(double tau, double dt, double T_bath, double T){
     /******************************************************************************
      * Berendsen thermostat lets the system temperature increase to a temprature T_bath from
@@ -927,6 +917,10 @@ double Berendsen(double tau, double dt, double T_bath, double T){
     return gamma;
 }
 
+/*******************************************************************************************************************
+ *                                ANDERSEN THERMOSTAT
+ * *****************************************************************************************************************
+ */
 void Andersen(double tau, double dt, double T_bath, vector<vector<double> > &V, vector<Atom> atoms){
     /*****************************************************************************
      * The Andersen thermostat simulates hard collisions between atoms insid the system
