@@ -368,6 +368,7 @@ vector < double > r_ij (3);
 
 int nbins = 100;
 int bin;
+double r2,r2i,r6i,r12i,deltaR;
 double binsize = 0.05;
 vector <int> bins (nbins,0);
 
@@ -377,74 +378,18 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
      * The total potential energy for particle i is then the sum of potentials from all other particles.
      */
 
-
-    double r2,r2i,r6i,r12i,deltaR;
-
-
     r_ij[0] = R[i][0] - R[j][0];
     r_ij[1] = R[i][1] - R[j][1];
     r_ij[2] = R[i][2] - R[j][2];
 
-
     // find g(r):
-
-
     deltaR = sqrt(r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2]);
 
     bin = (int) floor(deltaR/binsize);
     if (bin < nbins){
         bins[bin] += 1;
     }
-    /*
-    if (deltaR < 0.5) {
-        bins[0] += 1;
-    }
-    else if (deltaR< 0.6) {
-        bins[1] += 1;
-    }
-    else if (deltaR< 0.7) {
-        bins[2] += 1;
-    }
-    else if (deltaR< 0.8) {
-        bins[3] += 1;
-    }
-    else if (deltaR< 0.9) {
-        bins[4] += 1;
-    }
-    else if (deltaR< 1.0) {
-        bins[5] += 1;
-    }
-    else if (deltaR< 1.1) {
-        bins[6] += 1;
-    }
-    else if (deltaR< 1.2) {
-        bins[7] += 1;
-    }
-    else if (deltaR< 1.3) {
-        bins[8] += 1;
-    }
-    else if (deltaR< 1.4) {
-        bins[9] += 1;
-    }
-    else if (deltaR< 1.5) {
-        bins[10] += 1;
-    }
-    else if (deltaR< 1.6) {
-        bins[11] += 1;
-    }
-    else if (deltaR< 1.7) {
-        bins[12] += 1;
-    }
-    else if (deltaR< 1.8) {
-        bins[13] += 1;
-    }
-    else if (deltaR< 1.9) {
-        bins[14] += 1;
-    }
-    else if (deltaR< 2.0) {
-        bins[15] += 1;
-    }
-    */
+
     // Periodic boundary conditions - Minimum Image Convention:
     if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
     else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
@@ -491,6 +436,7 @@ vector < double > Ekin;
 vector < double > Epot;
 vector <double> r_msq_t;
 vector <double> r0 (3);
+
 vector <double> n_crossings (3);
 vector < double > Time_vec ;
 vector < double > Pressure ;
@@ -502,35 +448,22 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
      *  using the Lenny-Jones potential to find the force between evry particle.
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
-    vector < double >  U (R.size());         // Vector that holds the potential energy for particle i.
-
-    vector < double > E_system;
-    vector < double > Temperature;
-    vector < double > Ekin;
-    vector < double > Epot;
-    vector <double> r_msq_t;
-
-
+    vector < double >  U (R.size());         // Vector that holds the potential energy for particle i
     vector < vector <double> > mean_disp (R.size(),vector <double> (3,0.0));
     vector <double> r2 (3);
+
     double dt = 0.02;
     int tmax = 1000;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
+    double tempi,Press;
     E_mean_system = 0;
     E_quad = 0;
-
-    //T_bath = T_bath/T_0;  // Heat bath at 150 degrees K,
-    //tau = 1*dt;
-    //tau = 10*dt;
     tau = 20*dt;
     gamma = 1.0;
 
     vector < vector <int> > binz (tmax,vector <int> (nbins,0));
-    vector < double > Time_vec ;
-    vector < double > Pressure ;
-
 
     for (int t=0;t<tmax;++t){
         char filename [20];
@@ -599,10 +532,6 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             bins[bin] = 0;
         }
 
-        vector <double> r2 (3);
-        vector <double> r0 (3);
-        vector <double> n_crossings (3);
-
         for (int i = 0; i < N; ++i) {
 
             V[i][0] = gamma*(V[i][0] + F[i][0]*dt/(2*m));   // then find the velocities at time (t+dt)
@@ -631,16 +560,15 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             }
         }
 
-
         rmsq = rmsq/N;
         r_msq_t.push_back(rmsq);
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(Ek+Ep);                 // Energy of the system.
         Ekin.push_back(Ek);
         Epot.push_back(Ep);
-        double tempi = 2*Ek/(3.0*N);
+        tempi = 2*Ek/(3.0*N);
         Temperature.push_back(tempi);              // Temperature
-        double Press = (N*tempi + P_sum/3);        // Pressure
+        Press = (N*tempi + P_sum/3);        // Pressure
         Pressure.push_back(Press);                 // Pressure
 
         gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
@@ -783,7 +711,7 @@ int main(){
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
 
     string filename = "state0999.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state
+    int RunFromFile = 0;                 // use filename as initial state
 
     Nx = kappa;
     Ny = kappa;
