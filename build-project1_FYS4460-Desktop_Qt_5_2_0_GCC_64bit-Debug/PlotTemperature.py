@@ -5,9 +5,7 @@ Should read output file from main.cpp and plot temperature as a
 function of time.
 '''
 
-
 from scitools.std import linspace,zeros,pi
-
 filename = 'temperatures.txt'
 file = open(filename,'r')
 
@@ -21,7 +19,6 @@ P = []       # Pressure
 r_msq_t = [] # Mean square displacement
 t = []       # time
 nsy = []     # not sure yet :-)
-
 bins0 = []
 bins1 = []
 bins2 = []
@@ -40,7 +37,6 @@ bins14 = []
 bins15 = []
 for line in file:
     Temp, time, Ek, Ep, Pressure, rmsq, bin0,bin1,bin2,bin3,bin4,bin5,bin6,bin7,bin8,bin9,bin10,bin11,bin12,bin13,bin14,bin15 = line.split() # split on whitespace
-
     T.append(float(Temp))
     t.append(float(time))
     E_kin.append(float(Ek))
@@ -52,7 +48,6 @@ for line in file:
         nsy.append(0)
     else:
         nsy.append(float(rmsq)/(float(time)*6))
-
     bins0.append(int(bin0))
     bins1.append(int(bin1))
     bins2.append(int(bin2))
@@ -69,7 +64,6 @@ for line in file:
     bins13.append(int(bin13))
     bins14.append(int(bin14))
     bins15.append(int(bin15))
-
 
 ###################################################################
 # Mean Temperature and mean pressure
@@ -116,7 +110,7 @@ import matplotlib.pyplot as plt
 
 plt.figure()
 plt.plot(t,T)
-plt.title('Temperature of system as funciton of time. T= %.4f pm %.5f   MD-units' % (meanT,sT))
+plt.title('Temperature of system as funciton of time. T= %.2f pm %.3f   MD-units' % (meanT,sT))
 plt.xlabel('time [MD]')
 plt.ylabel('Temperature [MD]')
 plt.legend('T(t)')
@@ -134,7 +128,7 @@ plt.hold(False)
 
 plt.figure()
 plt.plot(t,P,'r-')
-plt.title('pressure of system as function of time. P= %.2f pm %.4f  MD-units' % (meanP,sP))
+plt.title('pressure of system as function of time. P= %.1f pm %.3f  MD-units' % (meanP,sP))
 plt.xlabel('time [MD]')
 plt.ylabel('pressure [MD]')
 plt.legend(('P(t)'), loc='lower right')
@@ -150,13 +144,12 @@ plt.legend(('MSQ(t)'), loc='lower right')
 
 plt.figure()
 plt.plot(t,nsy,'r-')
-plt.title('Diffusion  D = %.2f ' % D)
+plt.title('Diffusion  D = %.1f ' % D)
 plt.xlabel('time [MD]')
 #plt.xlabel('time [fs]')
 plt.ylabel('msq/t [MD]')
 #plt.ylabel('msq/t [m^2/t]')
 plt.legend(('Diffusion constant'), loc='lower right')
-
 
 
 binz = zeros(16)
@@ -178,7 +171,7 @@ for i in range(len(bin0)):
     binz[14] += bins14[i]
     binz[15] += bins15[i]
 
-binz[:] = binz[:]/len(bin0)
+binz[:] = binz[:]/(len(bin0)*2048)
 
 radius = linspace(0.5,2.0,16)
 volumeR = zeros(16)
@@ -195,14 +188,4 @@ for i in range(16):
 plt.figure()
 plt.plot(radius,binz,'r-*')
 
-
-'''
-bins = 7
-fontsize = 'medium'
-plt.figure(figsize=(5,5))
-plt.title('Correlation function. Number of atoms present in distance intervall from another')
-plt.hist(bins,binz,histtype='bar',align='mid',orientation='vertical')
-plt.ylabel('N particles')
-plt.xlabel('distance from atom')
-'''
 plt.show(True)
