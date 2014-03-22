@@ -5,7 +5,8 @@ Should read output file from main.cpp and plot temperature as a
 function of time.
 '''
 
-from scitools.std import zeros,linspace
+
+from scitools.std import linspace,zeros,pi
 
 filename = 'temperatures.txt'
 file = open(filename,'r')
@@ -20,9 +21,26 @@ P = []       # Pressure
 r_msq_t = [] # Mean square displacement
 t = []       # time
 nsy = []     # not sure yet :-)
-binz = zeros(12)     # number of particles in given radius from another particle
+
+bins0 = []
+bins1 = []
+bins2 = []
+bins3 = []
+bins4 = []
+bins5 = []
+bins6 = []
+bins7 = []
+bins8 = []
+bins9 = []
+bins10 = []
+bins11 = []
+bins12 = []
+bins13 = []
+bins14 = []
+bins15 = []
 for line in file:
-    Temp,time,Ek,Ep,Pressure,rmsq,bin0,bin1,bin2,bin3,bin4,bin5,bin6,bin7,bin8,bin9,bin10,bin11 = line.split() # split on whitespace
+    Temp, time, Ek, Ep, Pressure, rmsq, bin0,bin1,bin2,bin3,bin4,bin5,bin6,bin7,bin8,bin9,bin10,bin11,bin12,bin13,bin14,bin15 = line.split() # split on whitespace
+
     T.append(float(Temp))
     t.append(float(time))
     E_kin.append(float(Ek))
@@ -34,18 +52,25 @@ for line in file:
         nsy.append(0)
     else:
         nsy.append(float(rmsq)/(float(time)*6))
-    binz[0] = int(bin0)
-    binz[1] = int(bin1)
-    binz[2] = int(bin2)
-    binz[3] = int(bin3)
-    binz[4] = int(bin4)
-    binz[5] = int(bin5)
-    binz[6] = int(bin6)
-    binz[7] = int(bin7)
-    binz[8] = int(bin8)
-    binz[9] = int(bin9)
-    binz[10] = int(bin10)
-    binz[11] = int(bin11)
+
+    bins0.append(int(bin0))
+    bins1.append(int(bin1))
+    bins2.append(int(bin2))
+    bins3.append(int(bin3))
+    bins4.append(int(bin4))
+    bins5.append(int(bin5))
+    bins6.append(int(bin6))
+    bins7.append(int(bin7))
+    bins8.append(int(bin8))
+    bins9.append(int(bin9))
+    bins10.append(int(bin10))
+    bins11.append(int(bin11))
+    bins12.append(int(bin12))
+    bins13.append(int(bin13))
+    bins14.append(int(bin14))
+    bins15.append(int(bin15))
+
+
 ###################################################################
 # Mean Temperature and mean pressure
 
@@ -133,12 +158,43 @@ plt.ylabel('msq/t [MD]')
 plt.legend(('Diffusion constant'), loc='lower right')
 
 
-distance_from_atom = linspace(0.1,1.1,12)
-#for i in range(11):
-#    binz(i) = bins(i)
+
+binz = zeros(16)
+for i in range(len(bin0)):
+    binz[0] += bins0[i]
+    binz[1] += bins1[i]
+    binz[2] += bins2[i]
+    binz[3] += bins3[i]
+    binz[4] += bins4[i]
+    binz[5] += bins5[i]
+    binz[6] += bins6[i]
+    binz[7] += bins7[i]
+    binz[8] += bins8[i]
+    binz[9] += bins9[i]
+    binz[10] += bins10[i]
+    binz[11] += bins11[i]
+    binz[12] += bins12[i]
+    binz[13] += bins13[i]
+    binz[14] += bins14[i]
+    binz[15] += bins15[i]
+
+binz[:] = binz[:]/len(bin0)
+
+radius = linspace(0.5,2.0,16)
+volumeR = zeros(16)
+volumeR[0] = (4./3)*pi*0.5**3
+for ii in range(16-1):
+    i = ii+1
+    volumeR[i] = (4./3)*pi*(radius[i]**3 - radius[ii]**3)
+
+rho = 1.0856
+
+for i in range(16):
+    binz[i] = binz[i]/(rho*volumeR[i])
 
 plt.figure()
-plt.plot(distance_from_atom,binz,'r-o')
+plt.plot(radius,binz,'r-*')
+
 
 '''
 bins = 7
