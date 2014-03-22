@@ -9,8 +9,12 @@ from scitools.std import linspace,zeros,pi
 filename = 'temperatures.txt'
 file = open(filename,'r')
 
-file.readline() # read fist and second line
+nbins = int(file.readline()) # first line is number of bins
+rho = float(file.readline()) # second is density of system
+N = int(file.readline())     # third line is number of particles in system
+file.readline() # read fourth and fifth line
 file.readline()
+
 E_kin = []   # kinetic energy
 E_pot = []   # potetial energy
 E_tot = []   # total energy of the system 
@@ -19,24 +23,20 @@ P = []       # Pressure
 r_msq_t = [] # Mean square displacement
 t = []       # time
 nsy = []     # not sure yet :-)
-bins0 = []
-bins1 = []
-bins2 = []
-bins3 = []
-bins4 = []
-bins5 = []
-bins6 = []
-bins7 = []
-bins8 = []
-bins9 = []
-bins10 = []
-bins11 = []
-bins12 = []
-bins13 = []
-bins14 = []
-bins15 = []
+
+binz = zeros(nbins)
+timeiterations = 0
 for line in file:
-    Temp, time, Ek, Ep, Pressure, rmsq, bin0,bin1,bin2,bin3,bin4,bin5,bin6,bin7,bin8,bin9,bin10,bin11,bin12,bin13,bin14,bin15 = line.split() # split on whitespace
+    values = line.split()
+
+    Temp = values[0]
+    time = values[1]
+    Ek = values[2]
+    Ep = values[3]
+    Pressure = values[4]
+    rmsq = values[5]
+    allbins = values[6:]
+
     T.append(float(Temp))
     t.append(float(time))
     E_kin.append(float(Ek))
@@ -48,22 +48,12 @@ for line in file:
         nsy.append(0)
     else:
         nsy.append(float(rmsq)/(float(time)*6))
-    bins0.append(int(bin0))
-    bins1.append(int(bin1))
-    bins2.append(int(bin2))
-    bins3.append(int(bin3))
-    bins4.append(int(bin4))
-    bins5.append(int(bin5))
-    bins6.append(int(bin6))
-    bins7.append(int(bin7))
-    bins8.append(int(bin8))
-    bins9.append(int(bin9))
-    bins10.append(int(bin10))
-    bins11.append(int(bin11))
-    bins12.append(int(bin12))
-    bins13.append(int(bin13))
-    bins14.append(int(bin14))
-    bins15.append(int(bin15))
+
+    timeiterations += 1
+    for i in range(len(allbins)):
+        binz[i] += (int(allbins[i]))
+        
+
 
 ###################################################################
 # Mean Temperature and mean pressure
@@ -152,40 +142,46 @@ plt.ylabel('msq/t [MD]')
 plt.legend(('Diffusion constant'), loc='lower right')
 
 
-binz = zeros(16)
-for i in range(len(bin0)):
-    binz[0] += bins0[i]
-    binz[1] += bins1[i]
-    binz[2] += bins2[i]
-    binz[3] += bins3[i]
-    binz[4] += bins4[i]
-    binz[5] += bins5[i]
-    binz[6] += bins6[i]
-    binz[7] += bins7[i]
-    binz[8] += bins8[i]
-    binz[9] += bins9[i]
-    binz[10] += bins10[i]
-    binz[11] += bins11[i]
-    binz[12] += bins12[i]
-    binz[13] += bins13[i]
-    binz[14] += bins14[i]
-    binz[15] += bins15[i]
+#######################################3
+print timeiterations
+l_binz = len(binz)
+print l_binz
 
-binz[:] = binz[:]/(len(bin0)*2048)
+radius = linspace(0,(l_binz+1)*0.1,l_binz)
 
-radius = linspace(0.5,2.0,16)
-volumeR = zeros(16)
-volumeR[0] = (4./3)*pi*0.5**3
-for ii in range(16-1):
-    i = ii+1
-    volumeR[i] = (4./3)*pi*(radius[i]**3 - radius[ii]**3)
+#plt.figure()
+#plt.plot(radius,binz)
 
-rho = 1.0856
 
-for i in range(16):
-    binz[i] = binz[i]/(rho*volumeR[i])
+volumeR = zeros(l_binz)
+
+for i in range(l_binz-1):
+    volumeR[i] = (4./3)*pi*(radius[i+1]**3 - radius[i]**3) # volume of shell in range [r,r+dr]
+
+binz[1:] = binz[1:]/(timeiterations*N*rho*volumeR[i]) # mean number of particles in volume
 
 plt.figure()
 plt.plot(radius,binz,'r-*')
+plt.title('Average number of particles in distance r from atom')
+plt.xlabel('r [MD-units]')
+plt.ylabel('Number of particles')
+plt.legend(['N(r)'])
+
+# g(r) function: probability of finding an atom in distance r from another atom.
+integral = 0
+for i in range(l_binz-1):
+    integral += (binz[i+1] + binz[i])
+
+integral = integral*0.5*0.1
+#print integral
+plt.figure()
+plt.plot(radius,binz/integral,'b-*')
+plt.title('Particle density in distance r from atom')
+plt.xlabel('r [MD-units]')
+plt.ylabel('particle density')
+plt.legend(['g(r)'])
+
 
 plt.show(True)
+
+
