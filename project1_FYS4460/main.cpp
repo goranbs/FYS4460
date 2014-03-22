@@ -437,7 +437,6 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
     else if (deltaR< 2.0) {
         bins[15] += 1;
     }
->>>>>>> fixbrach
 
     // Periodic boundary conditions - Minimum Image Convention:
     if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
@@ -521,7 +520,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     tau = 20*dt;
     gamma = 1.0;
 
-    vector < vector <int> > binz (tmax,vector <int> (15,0));
+    vector < vector <int> > binz (tmax,vector <int> (16,0));
     vector < double > Time_vec ;
     vector < double > Pressure ;
 
@@ -585,8 +584,13 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
 
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);               // Update box-list
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
-
         write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                                // write to file
+
+        binz[t] = bins;
+        for (int bin = 0; bin < 16; ++bin) {
+            // empty bins.
+            bins[bin] = 0;
+        }
 
         vector <double> r2 (3);
         vector <double> r0 (3);
@@ -647,14 +651,10 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     for (int t = 0; t < tmax; ++t) {
         // MD units:
 
-        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " << bins[0] << " " << bins[1] << " " << bins[2] << " " << bins[3] << " " << bins[4] << " " << bins[5] << " " << bins[6] << " " << bins[7] << " " << bins[8] << " " << bins[9] << " " << bins[10] << " " << bins[11] << " " << bins[12] << " " << bins[13] << " " << bins[14] << " " << bins[15] <<endl;
+        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " << binz[t][0] << " " << binz[t][1] << " " << binz[t][2] << " " << binz[t][3] << " " << binz[t][4] << " " << binz[t][5] << " " << binz[t][6] << " " << binz[t][7] << " " << binz[t][8] << " " << binz[t][9] << " " << binz[t][10] << " " << binz[t][11] << " " << binz[t][12] << " " << binz[t][13] << " " << binz[t][14] << " " << binz[t][15] <<endl;
         //ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
-    for (int bin = 0; bin < 16; ++bin) {
-        // empty bins.
-        bins[bin] = 0;
-    }
 
     // Calculate the total energy of the system and its standard deviation:
     for (int index = 0; index < E_system.size(); ++index) {
