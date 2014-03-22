@@ -366,8 +366,10 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
 vector < double > fij (3);
 vector < double > r_ij (3);
 
-
-vector <int> bins (16,0);
+int nbins = 100;
+int bin;
+double binsize = 0.05;
+vector <int> bins (nbins,0);
 
 void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
@@ -389,6 +391,11 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
 
     deltaR = sqrt(r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2]);
 
+    bin = (int) floor(deltaR/binsize);
+    if (bin < nbins){
+        bins[bin] += 1;
+    }
+    /*
     if (deltaR < 0.5) {
         bins[0] += 1;
     }
@@ -437,7 +444,7 @@ void calculate_forces(vector < vector < double > > &R, vector < vector < double 
     else if (deltaR< 2.0) {
         bins[15] += 1;
     }
-
+    */
     // Periodic boundary conditions - Minimum Image Convention:
     if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
     else if (r_ij[0] < -Lx/2){r_ij[0] = Lx + r_ij[0];}
@@ -520,7 +527,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     tau = 20*dt;
     gamma = 1.0;
 
-    vector < vector <int> > binz (tmax,vector <int> (16,0));
+    vector < vector <int> > binz (tmax,vector <int> (nbins,0));
     vector < double > Time_vec ;
     vector < double > Pressure ;
 
@@ -645,13 +652,19 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
 
     // Write temperatures to file temperatures.txt
     ofstream ofile("temperatures.txt");
+    ofile << nbins << endl;
+    ofile << N/(Lx*Ly*Lz) << endl;
+    ofile << N << endl;
     ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
 
     for (int t = 0; t < tmax; ++t) {
         // MD units:
-
-        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " << binz[t][0] << " " << binz[t][1] << " " << binz[t][2] << " " << binz[t][3] << " " << binz[t][4] << " " << binz[t][5] << " " << binz[t][6] << " " << binz[t][7] << " " << binz[t][8] << " " << binz[t][9] << " " << binz[t][10] << " " << binz[t][11] << " " << binz[t][12] << " " << binz[t][13] << " " << binz[t][14] << " " << binz[t][15] <<endl;
+        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " ;
+        for (int i = 0; i < nbins; ++i) {
+            ofile << binz[t][i] << " ";
+        }
+        ofile << endl;
         //ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
