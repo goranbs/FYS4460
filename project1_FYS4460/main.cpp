@@ -365,17 +365,69 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
  * *****************************************************************************************************/
 vector < double > fij (3);
 vector < double > r_ij (3);
+vector <int> bins (16,0);
 void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
      */
 
-    double r2,r2i,r6i,r12i;
+    double r2,r2i,r6i,r12i,deltaR;
 
     r_ij[0]=  R[i][0] - R[j][0];
     r_ij[1] = R[i][1] - R[j][1];
     r_ij[2] = R[i][2] - R[j][2];
+
+    deltaR = sqrt(r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2]);
+
+    if (deltaR < 0.5) {
+        bins[0] += 1;
+    }
+    else if (deltaR< 0.6) {
+        bins[1] += 1;
+    }
+    else if (deltaR< 0.7) {
+        bins[2] += 1;
+    }
+    else if (deltaR< 0.8) {
+        bins[3] += 1;
+    }
+    else if (deltaR< 0.9) {
+        bins[4] += 1;
+    }
+    else if (deltaR< 1.0) {
+        bins[5] += 1;
+    }
+    else if (deltaR< 1.1) {
+        bins[6] += 1;
+    }
+    else if (deltaR< 1.2) {
+        bins[7] += 1;
+    }
+    else if (deltaR< 1.3) {
+        bins[8] += 1;
+    }
+    else if (deltaR< 1.4) {
+        bins[9] += 1;
+    }
+    else if (deltaR< 1.5) {
+        bins[10] += 1;
+    }
+    else if (deltaR< 1.6) {
+        bins[11] += 1;
+    }
+    else if (deltaR< 1.7) {
+        bins[12] += 1;
+    }
+    else if (deltaR< 1.8) {
+        bins[13] += 1;
+    }
+    else if (deltaR< 1.9) {
+        bins[14] += 1;
+    }
+    else if (deltaR< 2.0) {
+        bins[15] += 1;
+    }
 
     // Periodic boundary conditions - Minimum Image Convention:
     if (r_ij[0] > Lx/2){r_ij[0] = - Lx + r_ij[0];}
@@ -429,6 +481,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     vector < double > Ekin;
     vector < double > Epot;
     vector <double> r_msq_t;
+
     vector < vector <double> > mean_disp (R.size(),vector <double> (3,0.0));
 
     double dt = 0.02;
@@ -444,7 +497,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     //tau = 10*dt;
     tau = 20*dt;
     gamma = 1.0;
-
+    vector < vector <int> > binz (tmax,vector <int> (15,0));
     vector < double > Time_vec ;
     vector < double > Pressure ;
 
@@ -505,9 +558,10 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             //cout << "clearing force and potential energy..." << endl;
         }
 
-        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);         // Update box-list
+        update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);               // Update box-list
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
-        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                          // write to file
+        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                                // write to file
+
         vector <double> r2 (3);
         vector <double> r0 (3);
         vector <double> n_crossings (3);
@@ -565,11 +619,14 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
     for (int t = 0; t < tmax; ++t) {
         // MD units:
-        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << endl;
+        ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " << bins[0] << " " << bins[1] << " " << bins[2] << " " << bins[3] << " " << bins[4] << " " << bins[5] << " " << bins[6] << " " << bins[7] << " " << bins[8] << " " << bins[9] << " " << bins[10] << " " << bins[11] << " " << bins[12] << " " << bins[13] << " " << bins[14] << " " << bins[15] <<endl;
         //ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
     }
     ofile.close();
-
+    for (int bin = 0; bin < 16; ++bin) {
+        // empty bins.
+        bins[bin] = 0;
+    }
     // Calculate the total energy of the system and its standard deviation:
     for (int index = 0; index < E_system.size(); ++index) {
         E_mean_system = E_mean_system + E_system[index];
