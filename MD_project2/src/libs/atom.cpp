@@ -76,6 +76,9 @@ const vector < double > Atom::velocity(){
 const vector < double > Atom::force(){
     return f;
 }
+const double Atom::potential(){
+    return u;
+}
 const vector<double> Atom::return_initial_position(){
     return r0;
 }

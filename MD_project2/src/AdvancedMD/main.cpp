@@ -26,7 +26,7 @@ void write_to_file(const vector<vector<double> > &R,const vector<vector<double> 
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list, double T_bath);
 
-void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
+void calculate_forces(vector <Atom> &atoms, vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
 
 void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
 
@@ -322,7 +322,7 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
                     int i = *it;
                     for (auto it2 = ++iter; it2 != box_list[main_box_index].end(); ++it2){
                         int j = *it2;
-                        calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum,U);
+                        calculate_forces(atoms,R,F,i,j,Lx,Ly,Lz,P_sum,U);
 
                     }
                 }
@@ -343,7 +343,7 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
 
                             if (i != j){
 
-                                calculate_forces(R,F,i,j,Lx,Ly,Lz,P_sum,U);
+                                calculate_forces(atoms,R,F,i,j,Lx,Ly,Lz,P_sum,U);
 
                             }
 
@@ -363,23 +363,30 @@ void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector 
  * *****************************************************************************************************/
 vector < double > fij (3);
 vector < double > r_ij (3);
-
+vector <double> Ri (3);
+vector <double> Rj (3);
+vector <double> Fi (3);
+vector <double> Fj (3);
 int nbins = 100;
 int bin;
 double r2,r2i,r6i,r12i,deltaR;
 double binsize = 0.05;
 vector <int> bins (nbins,0);
 
-void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
+void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
      */
 
+    /*
     r_ij[0] = R[i][0] - R[j][0];
     r_ij[1] = R[i][1] - R[j][1];
     r_ij[2] = R[i][2] - R[j][2];
-
+    */
+    Ri = atoms[i].position();
+    Rj = atoms[j].position();
+    for (int k = 0; k < 3; ++k) {r_ij[k] = Ri[k] - Rj[k];}
     // find g(r):
     deltaR = sqrt(r_ij[0]*r_ij[0] + r_ij[1]*r_ij[1] + r_ij[2]*r_ij[2]);
 
@@ -446,8 +453,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
      *  using the Lenny-Jones potential to find the force between evry particle.
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
-    vector < double >  U (R.size());         // Vector that holds the potential energy for particle i
-    vector < vector <double> > mean_disp (R.size(),vector <double> (3,0.0));
+    vector < double >  U (N);         // Vector that holds the potential energy for particle i
+    vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
     vector <double> r2 (3);
 
     double dt = 0.02;
@@ -476,7 +483,6 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
             R[i][1] = R[i][1] + V[i][1]*dt;
             R[i][2] = R[i][2] + V[i][2]*dt;
-            atoms[i].update_position(R[i]);
 
             // Adjust positions after periodic boundary conditions
             if (R[i][0] > Lx){
@@ -505,6 +511,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
                 R[i][2] = R[i][2] + Lz;
                 atoms[i].cross_boundary(0,0,-1);
             }
+            atoms[i].update_position(R[i]);
         }
         Ek = 0;
         Ep = 0;
@@ -549,7 +556,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             }
 
             Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
-            Ep += U[i];
+            Ep += atoms[i].potential();
         }
         double rmsq = 0;
         for (int i = 0; i < N; ++i) {
@@ -696,7 +703,7 @@ int main(){
     int N;
     int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
-    int kappa = 8;     //
+    int kappa = 6;     //
     double r_cut;      // cutoff lenght
     double density;    // density of system
 
@@ -738,8 +745,7 @@ int main(){
     vector < list <int> > box_list(N_boxes);
 
     /*******************************************************************************************
-     *              unittesting with only two particles - Atom class
-     */
+     *              unittesting with only two particles - Atom class                          */
 
     //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list,T_bath);
     //initialize(V,R,N,Nx,Ny,Nz);
@@ -945,7 +951,7 @@ double Berendsen(double tau, double dt, double T_bath, double T){
 /*******************************************************************************************************************
  *                                ANDERSEN THERMOSTAT
  * *****************************************************************************************************************
- */
+ *
 void Andersen(double tau, double dt, double T_bath, vector<vector<double> > &V, vector<Atom> atoms){
     /*****************************************************************************
      * The Andersen thermostat simulates hard collisions between atoms insid the system
@@ -954,7 +960,7 @@ void Andersen(double tau, double dt, double T_bath, vector<vector<double> > &V, 
      *                                      sqrt(kB*T_bath/m)
      *
      * Usefull when equilibrating systems, but disturbs the dynamics of e.g. lattice vibrations.
-     */
+     *
     double gamma = 1;
     double vel;
     double P = dt/tau;
@@ -970,5 +976,5 @@ void Andersen(double tau, double dt, double T_bath, vector<vector<double> > &V, 
     }
 
 }
-
+*/
 

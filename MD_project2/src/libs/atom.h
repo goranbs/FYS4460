@@ -18,6 +18,7 @@ public:
     const vector <double> position();
     const vector <double> velocity();
     const vector <double> force();
+    const double potential();
     const vector <double> return_initial_position();
     double get_potential();
     void cross_boundary(int i, int j , int k);
