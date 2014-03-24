@@ -4,18 +4,16 @@
 #include <stdlib.h>        // srand(), rand()
 #include <time.h>
 #include <fstream>
-//#include <lib.h>
 #include <vector>
 #include <cmath>
-//#include <random>
 #include <unitconverter.h>
 #include <list>
 #include <algorithm>        //
-#include "initialstate.h"
-#include "atom.h"
 #include <string>
+#include <unitconverter.h>
+#include <atom.h>
+#include <initialstate.h>
 
-//#include <armadillo>
 
 using namespace std;
 //using namespace arma;
