@@ -21,7 +21,7 @@ Atom::Atom(vector < double > r_, vector < double > v_, vector < double > f_, dou
     r = r_;
     v = v_;
     f = f_;
-    r0 = r;
+    r0 = r_;
 
 }
 
@@ -39,36 +39,44 @@ vector < double > Atom::return_n_crossings(){
 }
 
 
-void Atom::update_position(vector <double> r_){
+void Atom::update_position(vector <double> &r_){
     for (int i = 0; i < 3; ++i) {
         r[i] = r_[i];
     }
 }
-void Atom::update_velocity(vector <double> v_){
+void Atom::update_velocity(vector <double> &v_){
     for (int i = 0; i < 3; ++i) {
         v[i] = v_[i];
     }
 }
-void Atom::update_force(vector <double> f_){
+void Atom::update_force(vector <double> &f_){
     for (int i = 0; i < 3; ++i) {
         f[i] = f_[i];
     }
 }
-void Atom::update_potential(double u_){
+void Atom::update_potential(double &u_){
     u = u_;
 }
+void Atom::reset_force(){
+    for (int i = 0; i < 3; ++i) {
+        f[i]= 0;
+    }
+}
+void Atom::reset_potential(){
+    u = 0;
+}
 
 
-vector < double > Atom::position(){
+const vector < double > Atom::position(){
     return r;
 }
-vector < double > Atom::velocity(){
+const vector < double > Atom::velocity(){
     return v;
 }
-vector < double > Atom::force(){
+const vector < double > Atom::force(){
     return f;
 }
-vector < double > Atom::return_initial_position(){
+const vector<double> Atom::return_initial_position(){
     return r0;
 }
 
