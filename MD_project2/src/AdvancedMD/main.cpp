@@ -455,7 +455,10 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
      */
     vector < double >  U (N);         // Vector that holds the potential energy for particle i
     vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
-    vector <double> r2 (3);
+    vector <double> r2 (3,0.0);
+    vector <double> v (3,0.0);
+    vector <double> r (3,0.0);
+    vector <double> f (3,0.0);
 
     double dt = 0.02;
     int tmax = 1000;
@@ -475,50 +478,64 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         sprintf(filename, "state%04d.txt", t);
 
         for (int i = 0; i < N; ++i) {      // update velocity and positions from the forces acting on the particles
+            r = atoms[i].position();
+            v = atoms[i].velocity();
+            f = atoms[i].force();
+            for (int k = 0; k < 3; ++k) {
+                v[k] = v[k] + f[k]*(dt/2*m);
+            }
+            /*
             V[i][0] = V[i][0] + F[i][0]*dt/(2*m);   // Calculate V[i] at (t + dt/2)
             V[i][1] = V[i][1] + F[i][1]*dt/(2*m);
             V[i][2] = V[i][2] + F[i][2]*dt/(2*m);
-            atoms[i].update_velocity(V[i]);
-
+            */
+            atoms[i].update_velocity(v);
+            for (int k = 0; k < 3; ++k) {
+                r[k] = r[k] + v[k]*dt;
+            }
+            /*
             R[i][0] = R[i][0] + V[i][0]*dt;         // Calculate R[i] at (t + dt)
             R[i][1] = R[i][1] + V[i][1]*dt;
             R[i][2] = R[i][2] + V[i][2]*dt;
-
+            */
             // Adjust positions after periodic boundary conditions
-            if (R[i][0] > Lx){
-                R[i][0] = R[i][0] - Lx;
+            if (r[0] > Lx){
+                r[0] = r[0] - Lx;
                 atoms[i].cross_boundary(1,0,0);
             }
             else if (R[i][0] < 0){
-                R[i][0] = R[i][0] + Lx;
+                r[0] = r[0] + Lx;
                 atoms[i].cross_boundary(-1,0,0);
             }
 
-            if (R[i][1] > Ly){
-                R[i][1] = R[i][1] - Ly;
+            if (r[1] > Ly){
+                r[1] = r[1] - Ly;
                 atoms[i].cross_boundary(0,1,0);
             }
-            else if (R[i][1] < 0){
-                R[i][1] = R[i][1] + Ly;
+            else if (r[1] < 0){
+                r[1] = r[1] + Ly;
                 atoms[i].cross_boundary(0,-1,0);
             }
 
-            if (R[i][2] > Lz){
-                R[i][2] = R[i][2] - Lz;
+            if (r[2] > Lz){
+                r[2] = r[2] - Lz;
                 atoms[i].cross_boundary(0,0,1);
             }
-            else if (R[i][2] < 0){
-                R[i][2] = R[i][2] + Lz;
+            else if (r[2] < 0){
+                r[2] = r[2] + Lz;
                 atoms[i].cross_boundary(0,0,-1);
             }
-            atoms[i].update_position(R[i]);
+            atoms[i].update_position(r);
         }
         Ek = 0;
         Ep = 0;
         double P_sum = 0;
 
-        for (int p = 0; p < R.size(); ++p) {
+        for (int k = 0; k < 3; ++k) {f[k] = 0;}
+        for (int p = 0; p < N; ++p) {
             // clear the force matrix:
+            atoms[p].reset_force();
+            atoms[p].reset_potential();
             F[p][0] = 0;
             F[p][1] = 0;
             F[p][2] = 0;
@@ -527,9 +544,16 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             //cout << "clearing force and potential energy..." << endl;
         }
 
+        for (int i = 0; i < N; ++i) {
+            for (int k = 0; k < 3; ++k) {
+                R[i][k] = r[k];
+                V[i][k] = v[k];
+            }
+        }
+
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);               // Update box-list
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
-        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                                // write to file
+//        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                                // write to file
 
         binz[t] = bins;
         for (int bin = 0; bin < 16; ++bin) {
@@ -748,8 +772,6 @@ int main(){
      *              unittesting with only two particles - Atom class                          */
 
     //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list,T_bath);
-    //initialize(V,R,N,Nx,Ny,Nz);
-    //test_Atom_class(R,V,F,N);
     //******************************************************************************************
 
 
@@ -795,69 +817,6 @@ int main(){
 }
 
 
-
-/*******************************************************************************************************************
- *                                    TEST ATOM CLASS
- * ****************************************************************************************************************/
-void test_Atom_class(vector < vector <double> > &R,vector < vector <double> > &V,vector < vector <double> > &F, const int N){
-    double up = 0.01;
-    vector < Atom > atoms;
-    F = vector < vector <double> > (R.size(),vector <double> (3,0));
-    for (int p = 0; p < N; ++p) {
-        Atom argon(R[p],V[p],F[p],up);
-        atoms.push_back(argon);
-    }
-    for (int atom = 0; atom < N; ++atom) {
-        R[atom][0] = 1.1 + R[atom][0];
-        R[atom][1] = 1.2 + R[atom][1];
-        R[atom][2] = 0.1 + R[atom][2];
-    }
-    for (int atom = 0; atom < N; ++atom) {
-        atoms[atom].update_position(R[atom]);
-        atoms[atom].cross_boundary(1,-1,0);
-        atoms[atom].cross_boundary(-1,1,1);
-    }
-
-    //vector < double > dist = atoms[0].return_distance_traveled();
-    vector < double > number_of_crossings = atoms[0].return_n_crossings();
-    vector < double > r0 = atoms[0].return_initial_position();
-
-    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
-    cout <<  r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
-    cout <<  R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << endl;
-    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
-    cout << "------------------------------------------------------------------------" << endl;
-
-    for (int atom = 0; atom < N; ++atom) {
-        R[atom][0] = -0.01 + R[atom][0];
-        R[atom][1] = 3.14 + R[atom][1];
-        R[atom][2] = 0 + R[atom][2];
-        V[atom][0] += 0.12;
-        V[atom][1] += -0.2;
-        V[atom][2] += -0.1;
-    }
-    for (int atom = 0; atom < N; ++atom) {
-        atoms[atom].update_position(R[atom]);
-        atoms[atom].update_velocity(V[atom]);
-        atoms[atom].cross_boundary(0,0,0);
-        atoms[atom].cross_boundary(-1,1,1);
-    }
-
-    number_of_crossings = atoms[0].return_n_crossings();
-    r0 = atoms[0].return_initial_position();
-
-    vector <double> pos = atoms[0].position();
-
-    cout << "-----------------------TESTING ATOM CLASS-------------------------------" << endl;
-    cout << r0[0] << " " << r0[1] << " " << r0[2] << " " << endl;
-    cout << R[0][0] << " " << R[0][1] << " " << R[0][2] << endl;
-    cout << pos[0] << " " << pos[1] << " " << pos[2] << endl;
-    cout << number_of_crossings[0] << " " << number_of_crossings[1] << " " << number_of_crossings[2] << endl;
-    //cout << position[] << " " << position[1] << " " << position[2] << "  " << endl;
-    cout << "------------------------------------------------------------------------" << endl;
-
-
-}
 
 /*******************************************************************************************************************
  *                                     READ INITIAL STATE
