@@ -698,7 +698,7 @@ int main(){
     int N;
     int Nx, Ny, Nz;    // number of origins
     double Lx,Ly,Lz;   // lattice length
-    int kappa = 8;     //
+    int kappa = 6;     //
     double r_cut;      // cutoff lenght
     double density;    // density of system
 
