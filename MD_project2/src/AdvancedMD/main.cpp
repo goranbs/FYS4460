@@ -544,6 +544,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             //cout << "clearing force and potential energy..." << endl;
         }
 
+        // for now, without entierly object orientation, we have to do this:
         for (int i = 0; i < N; ++i) {
             for (int k = 0; k < 3; ++k) {
                 R[i][k] = r[k];
@@ -563,12 +564,21 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
 
         for (int i = 0; i < N; ++i) {
 
+            /*
             V[i][0] = gamma*(V[i][0] + F[i][0]*dt/(2*m));   // then find the velocities at time (t+dt)
             V[i][1] = gamma*(V[i][1] + F[i][1]*dt/(2*m));
             V[i][2] = gamma*(V[i][2] + F[i][2]*dt/(2*m));
+            */
+            for (int k = 0; k < 3; ++k) {
+                v[k] = V[i][k];
+                f[k] = F[i][k];
+            }
+            for (int k = 0; k < 3; ++k) {
+                v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
+            }
 
-            atoms[i].update_velocity(V[i]);
-            atoms[i].update_force(F[i]);
+            atoms[i].update_velocity(v);
+            atoms[i].update_force(f);
             atoms[i].update_potential(U[i]);
 
             r2 = atoms[i].position();
@@ -579,7 +589,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
                 mean_disp[i][ijk] += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
             }
 
-            Ek += 0.5*m*(V[i][0]*V[i][0] + V[i][1]*V[i][1] + V[i][2]*V[i][2]); // total kinetic energy
+            Ek += 0.5*m*(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]); // total kinetic energy
             Ep += atoms[i].potential();
         }
         double rmsq = 0;
