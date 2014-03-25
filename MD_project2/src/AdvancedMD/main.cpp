@@ -22,7 +22,7 @@ using namespace std;
  *             FUNCTION DECLARATIONS
  * ********************************************************************************************************
  */
-void write_to_file(const vector<vector<double> > &R,const vector<vector<double> > &V,const vector<vector<double> > &F,const vector<list<int> > &box_list, const string &filename, int N,double t);
+void write_to_file(vector<Atom> atoms, const vector<list<int> > &box_list, const string &filename, int N, double t);
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list, double T_bath);
 
@@ -383,7 +383,13 @@ double r2,r2i,r6i,r12i,deltaR,potential;
 double binsize = 0.05;
 vector <int> bins (nbins,0);
 
-void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
+void calculate_forces(vector <Atom> &atoms,
+                      vector < vector < double > > &R,
+                      vector < vector < double > > &F,
+                      const int i,const int j,
+                      const double Lx,const double Ly,const double Lz,
+                      double Pi,
+                      vector < double > &U){
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
@@ -470,7 +476,16 @@ vector <double> n_crossings (3);
 vector < double > Time_vec ;
 vector < double > Pressure ;
 
-void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vector <double> > &R, vector < vector <double> > &F, const int N, double Lx, double Ly, double Lz, int N_cells_x,int N_cells_y,int N_cells_z, double Lcx, double Lcy, double Lcz, vector < list <int> > &box_list,double T_bath){
+void integrator(vector <Atom> atoms,
+                vector < vector <double> > &V,
+                vector < vector <double> > &R,
+                vector < vector <double> > &F,
+                const int N,
+                double Lx, double Ly, double Lz,
+                int N_cells_x,int N_cells_y,int N_cells_z,
+                double Lcx, double Lcy, double Lcz,
+                vector < list <int> > &box_list,
+                double T_bath){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -578,7 +593,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
 
         update_box_list(Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,R,box_list);               // Update box-list
         Lennard_Jones(atoms,F,R,U,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
-//        write_to_file(R,V,F,box_list,filename,N,t*dt*Time_0);                                // write to file
+        write_to_file(atoms,box_list,filename,N,t*dt*Time_0);                                // write to file
 
         binz[t] = bins;
         for (int bin = 0; bin < 16; ++bin) {
@@ -728,7 +743,11 @@ void test_2particles(double Lx,double Ly,double Lz,int N_cells_x,int N_cells_y,i
  *                                    Write to File
  ***************************************************************************************************************************
  */
-void write_to_file(const vector < vector < double > > &R, const vector < vector < double > > &V, const vector < vector < double > > &F, const vector < list < int > > &box_list, const string &filename, int N, double t){
+void write_to_file(vector <Atom> atoms,
+                   const vector < list < int > > &box_list,
+                   const string &filename,
+                   int N,
+                   double t){
     /* Writes positions R[p], velocities V[p] and forcec F[p] to file where p denotest particle p, to file filename.
      * every particle belongs to a box in the system. The box is numbered boxnumber.
      */
@@ -738,11 +757,17 @@ void write_to_file(const vector < vector < double > > &R, const vector < vector 
     myfile << N << endl;
     myfile << filename << "time: " << t << endl;
 
+    vector <double> r (3,0.0);
+    vector <double> v (3,0.0);
+    vector <double> f (3,0.0);
     for (int box_nr = 0; box_nr < box_list.size(); ++box_nr){
 
         for (const int & p : box_list[box_nr]){
-
-            myfile << "Ar" << " " << R[p][0] << " " << R[p][1] << " " << R[p][2] << " " << V[p][0] << " " << V[p][1] << " " << V[p][2] << " " <<  F[p][0] << " " << F[p][1] << " " << F[p][2] << " " << box_nr << endl;
+            r = atoms[p].position();
+            v = atoms[p].velocity();
+            f = atoms[p].force();
+            myfile << "Ar " << r[0] << " " << r[1] << " " << r[2] << " " << v[0] << " " << v[1] << " " << v[2]
+                   << " " <<  f[0] << " " << f[1] << " " << f[2] << " " << box_nr << endl;
         }
     }
     myfile.close();
