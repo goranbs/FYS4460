@@ -54,6 +54,12 @@ void Atom::update_force(vector <double> &f_){           // F. reset force
         f[i] = f_[i];
     }
 }
+void Atom::subtract_force(vector<double> &f_){          // F. subtract force from existing
+    for (int i = 0; i < 3; ++i) {
+        f[i] -= f_[i];
+    }
+}
+
 void Atom::add_force(vector <double> &f_){              // F. add force to existing
     for (int i = 0; i < 3; ++i) {
         f[i] += f_[i];

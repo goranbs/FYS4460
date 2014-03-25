@@ -12,6 +12,7 @@ public:
     void update_position(vector <double> &r_);
     void update_velocity(vector <double> &v_);
     void update_force(vector <double> &f_);
+    void subtract_force(vector <double> &f_);
     void add_force(vector <double> &f_);
     void update_potential(double &u_);
     void add_potential(double &u_);

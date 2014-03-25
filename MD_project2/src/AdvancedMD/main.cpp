@@ -248,11 +248,21 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
 
 }
 
+
 /* ******************************************************************************************************
  *                                          LENNARD-JONES
  *                                         BOX-calculation
  ** *****************************************************************************************************/
-void Lennard_Jones(vector <Atom> atoms, vector < vector < double > > &F, vector < vector < double > > &R, vector < double > &U, int N, double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double &P_sum){
+void Lennard_Jones(
+        vector <Atom> &atoms,
+        vector < vector < double > > &F,
+        vector < vector < double > > &R,
+        vector < double > &U,
+        int N,
+        double Lx, double Ly, double Lz,
+        int N_cells_x, int N_cells_y, int N_cells_z,
+        vector < list < int > > &box_list,
+        double &P_sum){
     /* The Lenny-Jones potential updates the forces F on particle i in position R.
      * One box-calculation - calulating the contribution from every particle in the system.
      *
@@ -365,11 +375,11 @@ vector < double > fij (3);
 vector < double > r_ij (3);
 vector <double> Ri (3);
 vector <double> Rj (3);
-vector <double> Fi (3);
-vector <double> Fj (3);
+vector <double> f (3,0.0);
+
 int nbins = 100;
 int bin;
-double r2,r2i,r6i,r12i,deltaR;
+double r2,r2i,r6i,r12i,deltaR,potential;
 double binsize = 0.05;
 vector <int> bins (nbins,0);
 
@@ -414,13 +424,7 @@ void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vec
     fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
     fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
 
-    Fi = atoms[i].force();
-    Fj = atoms[j].force();
-    for (int k = 0; k < 3; ++k) {
-        Fi[k] = Fi[k] + fij[k];
-        Fj[k] = Fj[k] - fij[k];
-    }
-    /*
+
     F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
     F[i][1] = F[i][1] + fij[1];
     F[i][2] = F[i][2] + fij[2];
@@ -428,13 +432,26 @@ void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vec
     F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle j in x direction.
     F[j][1] = F[j][1] - fij[1];
     F[j][2] = F[j][2] - fij[2];
-    */
+
+
+    potential = 4*(r12i -r6i);
+
+    double a = potential;
+
+    atoms[i].add_force(fij);
+    atoms[j].subtract_force(fij);
+    atoms[i].add_potential(potential);
+    atoms[j].add_potential(potential);
     U[i] += 4*(r12i - r6i); // the potential energy for particle i in j's presence.
     U[j] += 4*(r12i - r6i); // potential energy for j in i's presence.
 
+    /*
     if (i < j){ // just to be sure :-)
-         Pi += (Fi[0]*r_ij[0] + Fi[1]*r_ij[1] + Fi[2]*r_ij[2]); // contribution to the system pressure
+         Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
     }
+    */
+    f = atoms[i].force();
+    Pi += (f[0]*r_ij[0] + f[1]*r_ij[1] + f[2]*r_ij[2]);
 }
 
 
@@ -575,19 +592,22 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             V[i][0] = gamma*(V[i][0] + F[i][0]*dt/(2*m));   // then find the velocities at time (t+dt)
             V[i][1] = gamma*(V[i][1] + F[i][1]*dt/(2*m));
             V[i][2] = gamma*(V[i][2] + F[i][2]*dt/(2*m));
-            */
+            *
             for (int k = 0; k < 3; ++k) {
                 v[k] = V[i][k];
                 f[k] = F[i][k];
             }
+            */
+            v = atoms[i].velocity();   // seems like v has changed since the Lennard-Jones call!
+            f = atoms[i].force();
             for (int k = 0; k < 3; ++k) {
                 v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
                 V[i][k] = v[k];
             }
 
             atoms[i].update_velocity(v);
-            atoms[i].update_force(f);
-            atoms[i].update_potential(U[i]);
+            //atoms[i].update_force(f);
+            //atoms[i].update_potential(U[i]);
 
             r2 = atoms[i].position();
             r0 = atoms[i].return_initial_position();
@@ -598,7 +618,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             }
 
             Ek += 0.5*m*(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]); // total kinetic energy
-            Ep += atoms[i].potential();
+            Ep += atoms[i].potential(); // U[i]
+            double a = 0;
         }
         double rmsq = 0;
         for (int i = 0; i < N; ++i) {
