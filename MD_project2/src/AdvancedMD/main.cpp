@@ -414,6 +414,13 @@ void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vec
     fij[1] = 24*(2*r12i - r6i)*r2i*r_ij[1];
     fij[2] = 24*(2*r12i - r6i)*r2i*r_ij[2];
 
+    Fi = atoms[i].force();
+    Fj = atoms[j].force();
+    for (int k = 0; k < 3; ++k) {
+        Fi[k] = Fi[k] + fij[k];
+        Fj[k] = Fj[k] - fij[k];
+    }
+    /*
     F[i][0] = F[i][0] + fij[0]; // adding up the forces on particle i in x direction.
     F[i][1] = F[i][1] + fij[1];
     F[i][2] = F[i][2] + fij[2];
@@ -421,12 +428,12 @@ void calculate_forces(vector <Atom> &atoms, vector < vector < double > > &R, vec
     F[j][0] = F[j][0] - fij[0]; // adding up the forces on particle j in x direction.
     F[j][1] = F[j][1] - fij[1];
     F[j][2] = F[j][2] - fij[2];
-
+    */
     U[i] += 4*(r12i - r6i); // the potential energy for particle i in j's presence.
     U[j] += 4*(r12i - r6i); // potential energy for j in i's presence.
 
     if (i < j){ // just to be sure :-)
-         Pi += (F[i][0]*r_ij[0] + F[i][1]*r_ij[1] + F[i][2]*r_ij[2]); // contribution to the system pressure
+         Pi += (Fi[0]*r_ij[0] + Fi[1]*r_ij[1] + Fi[2]*r_ij[2]); // contribution to the system pressure
     }
 }
 
@@ -534,8 +541,8 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         for (int k = 0; k < 3; ++k) {f[k] = 0;}
         for (int p = 0; p < N; ++p) {
             // clear the force matrix:
-            atoms[p].reset_force();
-            atoms[p].reset_potential();
+            atoms[p].clear_force();
+            atoms[p].clear_potential();
             F[p][0] = 0;
             F[p][1] = 0;
             F[p][2] = 0;
@@ -575,6 +582,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
             }
             for (int k = 0; k < 3; ++k) {
                 v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
+                V[i][k] = v[k];
             }
 
             atoms[i].update_velocity(v);
@@ -607,7 +615,7 @@ void integrator(vector <Atom> atoms, vector < vector <double> > &V,vector < vect
         Epot.push_back(Ep);
         tempi = 2*Ek/(3.0*N);
         Temperature.push_back(tempi);              // Temperature
-        Press = (N*tempi + P_sum/3);        // Pressure
+        Press = (N*tempi + P_sum/3);               // Pressure
         Pressure.push_back(Press);                 // Pressure
 
         gamma = Berendsen(tau,dt,T_bath,Temperature[t]);

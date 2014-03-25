@@ -12,9 +12,11 @@ public:
     void update_position(vector <double> &r_);
     void update_velocity(vector <double> &v_);
     void update_force(vector <double> &f_);
+    void add_force(vector <double> &f_);
     void update_potential(double &u_);
-    void reset_force();
-    void reset_potential();
+    void add_potential(double &u_);
+    void clear_force();
+    void clear_potential();
     const vector <double> position();
     const vector <double> velocity();
     const vector <double> force();
@@ -31,9 +33,9 @@ private:
     vector <double> f;            // total force felt from other particles
     vector <double> r0;           // initial position
     vector <double> n_crossings ; // number of crossings out of the system (+1 pos dir, -1 neg dir.)
-    vector <double> dist;         // distance traveled.
+    //vector <double> dist;         // distance traveled.
     double u;                     // total potential
-    int N;
+    //int N;
 
 };
 
