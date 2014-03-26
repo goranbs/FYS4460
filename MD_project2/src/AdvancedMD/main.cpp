@@ -739,7 +739,7 @@ int main(){
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
 
     string filename = "state0999.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state
+    int RunFromFile = 0;                 // use filename as initial state
 
     Nx = kappa;
     Ny = kappa;
@@ -849,7 +849,7 @@ void ReadInitialState(string filename, vector <Atom> &atoms,
 
         while(!myfile.eof()){
             myfile >> atomType;
-            cout << "hey!" << endl;
+
             for (int i = 0; i < 3; i++) myfile >> r[i];
             for (int i = 0; i < 3; i++) myfile >> v[i];
             for (int i = 0; i < 3; i++) myfile >> f[i];

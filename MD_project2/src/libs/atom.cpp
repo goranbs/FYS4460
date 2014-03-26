@@ -34,69 +34,52 @@ void Atom::cross_boundary(int i, int j, int k){
     n_crossings[2] += k;
 }
 
-vector < double > Atom::return_n_crossings(){           // number of crossings out of system oundaries
-    return n_crossings;
-}
 
 
-void Atom::update_position(vector <double> &r_){        // R. reset postion
+void Atom::update_position(const vector <double> &r_){          // R. reset postion
     for (int i = 0; i < 3; ++i) {
         r[i] = r_[i];
     }
 }
-void Atom::update_velocity(vector <double> &v_){        // V. reset velocity
+void Atom::update_velocity(const vector <double> &v_){          // V. reset velocity
     for (int i = 0; i < 3; ++i) {
         v[i] = v_[i];
     }
 }
-void Atom::update_force(vector <double> &f_){           // F. reset force
+void Atom::update_force(const vector <double> &f_){             // F. reset force
     for (int i = 0; i < 3; ++i) {
         f[i] = f_[i];
     }
 }
-void Atom::subtract_force(vector<double> &f_){          // F. subtract force from existing
+void Atom::subtract_force(const vector<double> &f_){            // F. subtract force from existing
     for (int i = 0; i < 3; ++i) {
         f[i] -= f_[i];
     }
 }
 
-void Atom::add_force(vector <double> &f_){              // F. add force to existing
+void Atom::add_force(const vector <double> &f_){                // F. add force to existing
     for (int i = 0; i < 3; ++i) {
         f[i] += f_[i];
     }
 }
-void Atom::clear_force(){                               // F. clear force vector. Force set to zero
+void Atom::clear_force(){                                       // F. clear force vector. Force set to zero
     for (int i = 0; i < 3; ++i) {
         f[i]= 0;
     }
 }
-void Atom::update_potential(double &u_){                // P. reset potential
+void Atom::update_potential(double &u_){                        // P. reset potential
     u = u_;
 }
-void Atom::add_potential(double &u_){                    // P. add potential to existing
+void Atom::add_potential(double &u_){                           // P. add potential to existing
     u += u_;
 }
 
-void Atom::clear_potential(){                           // P. clear potential. Potential set to zero.
+void Atom::clear_potential(){                                   // P. clear potential. Potential set to zero.
     u = 0;
 }
 
 
-const vector < double > Atom::position(){               // R. return position
-    return r;
-}
-const vector < double > Atom::velocity(){               // V. return velocity
-    return v;
-}
-const vector < double > Atom::force(){                  // F. return force
-    return f;
-}
-const double Atom::potential(){                         // P. return potential
-    return u;
-}
-const vector<double> Atom::return_initial_position(){   // R0. return initial position
-    return r0;
-}
+
 
 
 

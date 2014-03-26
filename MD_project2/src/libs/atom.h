@@ -9,23 +9,22 @@ class Atom{
 
 public:
     Atom(vector <double> r_, vector <double> v_, vector <double> f_, double u_);
-    void update_position(vector <double> &r_);
-    void update_velocity(vector <double> &v_);
-    void update_force(vector <double> &f_);
-    void subtract_force(vector <double> &f_);
-    void add_force(vector <double> &f_);
+    void update_position(const vector <double> &r_);
+    void update_velocity(const vector <double> &v_);
+    void update_force(const vector <double> &f_);
+    void subtract_force(const vector <double> &f_);
+    void add_force(const vector <double> &f_);
     void update_potential(double &u_);
     void add_potential(double &u_);
     void clear_force();
     void clear_potential();
-    const vector <double> position();
-    const vector <double> velocity();
-    const vector <double> force();
-    const double potential();
-    const vector <double> return_initial_position();
-    double get_potential();
+    inline const vector<double> &position();
+    inline const vector <double> &velocity();
+    inline const vector <double> &force();
+    inline const double potential() const;
+    inline const vector <double> &return_initial_position();
     void cross_boundary(int i, int j , int k);
-    vector <double> return_n_crossings();
+    inline const vector<double> &return_n_crossings() const;
 
 
 private:
@@ -39,5 +38,25 @@ private:
     //int N;
 
 };
+
+inline const vector < double > &Atom::position(){               // R. return position
+    return r;
+}
+inline const vector < double > &Atom::velocity(){               // V. return velocity
+    return v;
+}
+inline const vector < double > &Atom::force(){                  // F. return force
+    return f;
+}
+inline const double Atom::potential() const {                   // P. return potential
+    return u;
+}
+inline const vector<double> &Atom::return_initial_position(){   // R0. return initial position
+    return r0;
+}
+inline const vector < double > &Atom::return_n_crossings() const{           // number of crossings out of system oundaries
+    return n_crossings;
+}
+
 
 #endif // ATOM_H
