@@ -738,8 +738,9 @@ int main(){
     double T_bath;
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
 
-    string filename = "state0999.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state
+
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0999.txt";   // read this state filename
+    int RunFromFile = 1;                 // use filename as initial state
 
     Nx = kappa;
     Ny = kappa;
