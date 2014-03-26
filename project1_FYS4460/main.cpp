@@ -28,7 +28,7 @@ void write_to_file(const vector<vector<double> > &R,const vector<vector<double> 
 
 void test_2particles(double Lx, double Ly, double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector<list<int> > box_list, double T_bath);
 
-void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F,const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U);
+void calculate_forces(vector<vector<double> > &R, vector<vector<double> > &F, const int &i, const int &j, const double &Lx, const double &Ly, const double &Lz, double Pi, vector < double > &U);
 
 void test_Atom_class(vector<vector<double> > &R, vector<vector<double> > &V, vector<vector<double> > &F, const int N);
 
@@ -372,10 +372,18 @@ double r2,r2i,r6i,r12i,deltaR;
 double binsize = 0.05;
 vector <int> bins (nbins,0);
 
-void calculate_forces(vector < vector < double > > &R, vector < vector < double > > &F, const int i,const int j,const double Lx,const double Ly,const double Lz, double Pi, vector < double > &U){
+void calculate_forces(vector < vector < double > > &R,
+                      vector < vector < double > > &F,
+                      const int &i,const int &j,
+                      const double &Lx,const double &Ly,const double &Lz,
+                      double Pi,
+                      vector < double > &U){
+
     /* Takes positionvector R for particle i and j. Where F is the total Force acting on the particle.
      * The function calculate_forces returns the potential energy for particle i felt from particle j.
      * The total potential energy for particle i is then the sum of potentials from all other particles.
+     *
+     * WHY does it have so much to say if I send in the value or the adress to Pi ?
      */
 
     r_ij[0] = R[i][0] - R[j][0];

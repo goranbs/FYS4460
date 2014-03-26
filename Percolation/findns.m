@@ -37,11 +37,11 @@ for i = 1:nx
         [x,dx,n] = logbin(clusta ,logbinsize ,logbinmax);
         if (isample==1)
             nnsp = n/ll;
-            nnsp = nnsp './dx;
+            nnsp = nnsp'./dx;
             nsp = nnsp;
         else
             nnsp = n/ll;
-            nnsp = nnsp './dx;
+            nnsp = nnsp'./dx;
             nsp = nsp + nnsp;
         end
     end
