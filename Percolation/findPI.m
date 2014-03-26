@@ -1,6 +1,5 @@
 
 
-function findPI(p,L)
 %
 % Program to generate P(p,L) and Pi(p,L)
 nsample = 5;
@@ -47,4 +46,4 @@ for lcount = lstart:lend
     drawnow
 end
 hold off
-end
+
