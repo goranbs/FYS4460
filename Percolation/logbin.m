@@ -9,6 +9,7 @@ function [x,dx,n] = logbin(y,a,binmax)
 %
 % First , general a list of edges , smallest value of y is 1
 %ymax = max(y);
+
 ymax = binmax;
 yedge = 1.0;
 istep = 1;

@@ -1,0 +1,9 @@
+# gitignore file. Choose which files should be ignored as commits.
+# change name to .gitignore only...
+
+*.txt
+*~
+*.user
+*.o
+*.png
+*.out*

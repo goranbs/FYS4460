@@ -3,10 +3,6 @@ function percolation()
 %
 % Project III - Percolation
 
-clf reset
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% a) make a feature to calculate P(p,L) for various p.
-
 
 %N_spanning = ?
 %imgsize=size(img)     % L x L x 3
@@ -16,6 +12,15 @@ clf reset
 %C = intersect(A,B);    % What is common for A and B
 %D = union(A,B);        % the union of A and B.
 
+clear all
+close all
+clf reset
+
+fontsize = 18;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% a) make a feature to calculate P(p,L) for various p.
+
+
 rectangularity = 1.0;             % cubic = 1
 L = 100;                           % system size
 r = rand(L,rectangularity*L);      % system
@@ -24,10 +29,10 @@ z = r <p;                          % binary matrix.
 [lw,num] = bwlabel(z,4);  % lw -mx of labels for each cluster. Each cluster gets a number.
                           % num is the number of clusters
 
-figure()
+%figure()
 title('cutoff p=0.6')
 img = label2rgb(lw,'jet','k','shuffle');  % create colour image
-image(img);  % show.
+%image(img);  % show.
 
 s1 = regionprops(lw,'Area');        % s= struct array with filds: Area
 area = cat(1,s1.Area);              % area is the are of the labels.
@@ -37,26 +42,39 @@ bbox = cat(1,s2.BoundingBox);
 
 total_area = L*L;
 N_total = num;
-
+p_c = 0.59275;                 % experimental value of the critical probability cutoff
+p_min = p_c + 0.001;           % p_min > p_c
 nsample = 10;                  % number of grid samples        
-p = (0.35:0.01:1.0);           % probability span
+p = (p_min:0.01:1.0);           % probability span
 nx = size(p,2);                % number of probabilities to run for
 lstart = 3;                    % system size start
 lend = 7;                      % system size stop
 
 Pi = zeros(nx,lend);           % Pi(p,L) = p(probabiliity of having percolation)           
 P = zeros(nx,lend);            % P(p,L)  = p(a sight is set as 1) = true if z < p(i) 
+if p_min > p_c
+    beta = zeros(nx,lend);         % exponential: P(p,L) ~ (p-pc)^beta.
+end
 lvalue = zeros(lend);    
 
 %clf reset;        
 
-legends = zeros(1,(lend-lstart));                    % list of legends
+%get(gca,'ColorOrder')
+figure()
+subplot(2,1,1);
+hold all
+subplot(2,1,2);
+hold all
+
+%legends = zeros(1,(lend-lstart));                    % list of legends
+legends = {};
 pc = 0;
 counter = 0;
+pc_list = [];
+
 for lcount = lstart:lend
-    count = lcount
-    lx = 2^count;                                    % make lx*ly area that has size (2^count)^2
-    ly = rectangularity*lx;
+    lx = 2^lcount;                                   % make lx*ly area that has size (2^count)^2
+    ly = rectangularity*lx;                          % I mean: lx*(rectangularity*ly).
     Total_area = lx*ly;
     for ns = 1:nsample
         z=rand(lx,ly);                               % (lx*ly) matrix of random distributed numbers in [0,1]
@@ -79,57 +97,92 @@ for lcount = lstart:lend
     
     P(:,lcount) = P(:,lcount)/nsample;     % mean
     Pi(:,lcount) = Pi(:,lcount)/nsample;   % mean
+    beta(:,lcount) = log(P(:,lcount) - (p(:)-p_c));
     
     % find pc:
     for i = 1:nx
         if Pi(i,lcount) > 0.2
-            if P(i,lcount) < 0.8
+            if Pi(i,lcount) < 0.8
                 pc = pc + p(i);
                 counter = counter + 1;
+                pc_list(counter) = p(i);
             end
         end
     end
     
     % plotting:
     %Title = ['pc= ' num2str(pc,'%g')]
-    legends((lcount - lstart + 1)) = count; %num2str(count,'%g');
-    %title(Title)
-    title('Probability of percolation as a function of the cutoff probability, and P(p,L)')
+    
+    alegend = num2str(lx,'%g');
+    alegend = ['L=' alegend];
+    legends{end+1} = alegend;
+    %legends(1,ncounts) = alegend
+    
     subplot(2,1,1);
-    plt1 = plot(p,P(:,lcount),'b-o');
+    plot(p,P(:,lcount),'-o');
     xlabel('p'); ylabel('P(p,L)');
-    set(gca,'FontSize',18)
-    hold on
+    set(gca,'FontSize',fontsize)
+    drawnow
   
     
     %title('Probability of a sight being set as a function of the cutoff probability')
     subplot(2,1,2);
     %title(Title)
-    plt2 = plot(p,Pi(:,lcount),'b-o');
+    plot(p,Pi(:,lcount),'-o');
     xlabel('p'); ylabel('Pi(p,L)');
-    set(gca,'FontSize',18)
+    set(gca,'FontSize',fontsize)
     drawnow
 end
 
 pc = pc/counter
-%legends
-%legends(:) = num2str(legends(:),'%s')
-%llength = length(legends);
-%legneds2 = []
-%for i = 1:llength
-%    legends2(i) = legends(i);
-%end
 
-%legend(legends)
+subplot(2,1,1);
+title('Probability of a site being within a spanning cluster as function of the cutoff probability p')
+subplot(2,1,2);
+Title = ['Probability of percolation. pc ~ ' num2str(pc,'%.2f')];
+title(Title)
+legend(legends,'Location', 'SouthEast')
+hold off
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+% More plotting: finding beta.
+
+p2 = p(2:end) - p_c;
+figure()
+subplot(2,1,1);
+hold all
+subplot(2,1,2);
+hold all
+for lcount = lstart:lend
+
+pfunc = (p2(:)).^beta(2:end,lcount);
+
+%alegend2 = {'P(p,L) ' num2str(lcount) ,'(p-pc)^{\beta} ' num2str(lcount)};
+%legends2(lcount - lstart +1) = alegend2;
+subplot(2,1,1);
+set(gca,'FontSize',fontsize)
+plot(p(2:end),P(2:end,lcount),'-o')
+xlabel('p'); ylabel('P(p,L)');
+drawnow
+
+subplot(2,1,2);
+set(gca,'FontSize',fontsize)
+plot(p(2:end),pfunc(:),'-*')
+xlabel('p'); ylabel('(p-p_c)^{\beta}')
+drawnow
+end
+
+subplot(2,1,1)
+Titl = ['Probability of cite being within spaning cluster.'];
+title(Titl)
+%legend(legends2)
+
+hold off
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % We see that the probability of a sight being set as a function of the
 % cutoff probability is closing up on the value 0.6.
 %
-% 
-hold off
-
 
 
 

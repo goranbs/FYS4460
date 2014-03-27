@@ -472,7 +472,7 @@ void integrator(vector <Atom> atoms,
     vector <double> f (3,0.0);
 
     double dt = 0.02;
-    int tmax = 1000;
+    int tmax = 500;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
@@ -542,7 +542,7 @@ void integrator(vector <Atom> atoms,
         }
 
         update_box_list(atoms,Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,N,box_list);               // Update box-list
-        Lennard_Jones(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);  // calculate the force at time (t+dt) using the new positions.
+        Lennard_Jones(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);        // calculate the force at time (t+dt) using the new positions.
         write_to_file(atoms,box_list,filename,N,t*dt*Time_0);                                // write to file
 
         binz[t] = bins;
@@ -724,11 +724,11 @@ int main(){
     vector <double> U;              // Potential energy for particle
 
     int N;
-    int Nx, Ny, Nz;    // number of origins
-    double Lx,Ly,Lz;   // lattice length
-    int kappa = 6;     //
-    double r_cut;      // cutoff lenght
-    double density;    // density of system
+    int Nx, Ny, Nz;     // number of origins
+    double Lx,Ly,Lz;    // lattice length
+    int kappa = 10;     //
+    double r_cut;       // cutoff lenght
+    double density;     // density of system
 
     // Cells
     double Lcx,Lcy,Lcz;                            // length of cell
@@ -740,7 +740,7 @@ int main(){
 
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0999.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state
+    int RunFromFile = 0;                 // use filename as initial state
 
     Nx = kappa;
     Ny = kappa;
@@ -758,9 +758,11 @@ int main(){
     N_cells_x = Lx/Lcx;
     N_cells_y = Ly/Lcy;
     N_cells_z = Lz/Lcz;
+
     Lcx = Lx/N_cells_x;
     Lcy = Ly/N_cells_y;
     Lcz = Lz/N_cells_z;
+
     N_boxes = int(N_cells_x*N_cells_y*N_cells_z);
 
     clock_t time1, time2, time3;
