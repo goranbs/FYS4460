@@ -26,13 +26,18 @@ L = 100;                           % system size
 r = rand(L,rectangularity*L);      % system
 p = 0.6;                           % cutoff value. 60% of the values generated in r < p.
 z = r <p;                          % binary matrix.
+
+figure()
+title('B&W image of percolation system Cutoff p=0.6')
+imshow(z)
+
 [lw,num] = bwlabel(z,4);  % lw -mx of labels for each cluster. Each cluster gets a number.
                           % num is the number of clusters
 
-%figure()
-title('cutoff p=0.6')
+figure()
+title('Color labeled clusters. Cutoff p=0.6')
 img = label2rgb(lw,'jet','k','shuffle');  % create colour image
-%image(img);  % show.
+imshow(img);  % show.
 
 s1 = regionprops(lw,'Area');        % s= struct array with filds: Area
 area = cat(1,s1.Area);              % area is the are of the labels.
@@ -60,7 +65,7 @@ lvalue = zeros(lend);
 %clf reset;        
 
 %get(gca,'ColorOrder')
-figure()
+
 subplot(2,1,1);
 hold all
 subplot(2,1,2);
@@ -97,7 +102,6 @@ for lcount = lstart:lend
     
     P(:,lcount) = P(:,lcount)/nsample;     % mean
     Pi(:,lcount) = Pi(:,lcount)/nsample;   % mean
-    beta(:,lcount) = log(P(:,lcount) - (p(:)-p_c));
     
     % find pc:
     for i = 1:nx
@@ -144,45 +148,150 @@ title(Title)
 legend(legends,'Location', 'SouthEast')
 hold off
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % More plotting: finding beta.
 
-p2 = p(2:end) - p_c;
+
 figure()
 subplot(2,1,1);
 hold all
 subplot(2,1,2);
 hold all
+% from now on we will use another pc:
+pc = 0.59275;
+
+betas = zeros(length(lstart:lend),1);
+stdev = zeros(length(betas),1);
+lnP = [];
+lnp = [];
+dPdp_mx = [];
 for lcount = lstart:lend
+    j = lcount - lstart + 1; % iteration 1,2,3....
+    ln_P = [];
+    ln_p_pc = [];
+    pc_index = 0;
+    for i=1:length(p)
+        if p(i) > pc
+            ln_p_pc(end + 1) = log(p(i)-pc);
+            ln_P(end+1) = log(P(i,lcount));
+        end
+        if p(i) < (pc + (p(2)-p(1))) 
+            pc_index = i;
+        end
+    end
 
-pfunc = (p2(:)).^beta(2:end,lcount);
+    dPdp = diff(ln_P)./diff(ln_p_pc);
+    beta = mean(dPdp);
 
-%alegend2 = {'P(p,L) ' num2str(lcount) ,'(p-pc)^{\beta} ' num2str(lcount)};
-%legends2(lcount - lstart +1) = alegend2;
-subplot(2,1,1);
-set(gca,'FontSize',fontsize)
-plot(p(2:end),P(2:end,lcount),'-o')
-xlabel('p'); ylabel('P(p,L)');
-drawnow
+    stdev(j) = std(dPdp,1);
+    betas(j) = beta; 
 
-subplot(2,1,2);
-set(gca,'FontSize',fontsize)
-plot(p(2:end),pfunc(:),'-*')
-xlabel('p'); ylabel('(p-p_c)^{\beta}')
-drawnow
+%diff = length(ln_P) - length(ln_p_pc)
+%should_be_41 = length(ln_P(diff:end))
+%add = should_be_41 - diff
+
+%len_P = length(ln_P)
+%len_p = length(ln_p_pc)
+%ln_P
+%ln_p_pc
+%len_dPdp = length(dPdp)
+%len_p = length(p(pc_index:end-1))
+
+
+    subplot(2,1,1)
+    plot(ln_p_pc,ln_P,'-o')
+    title('finding \beta ')
+    ylabel('log(P(p,L))')
+    xlabel('log(p-pc)')
+    set(gca,'FontSize',fontsize)
+    drawnow
+
+    subplot(2,1,2)
+    plot(p(pc_index:end-1),dPdp,'-d')
+    set(gca,'FontSize',fontsize)
+    ylabel('d(log(P))/dlog(p)')
+    xlabel('p')
+    drawnow
+
+    lnP(:,end+1) = ln_P(:);
+    lnp(:,end+1) = ln_p_pc(:);
+    dPdp_mx(:,end+1) = dPdp(:);
+
 end
 
-subplot(2,1,1)
-Titl = ['Probability of cite being within spaning cluster.'];
-title(Titl)
-%legend(legends2)
+subplot(2,1,1);
+title('loglog plot')
+axis([-10 -1 -2 0])
+legend(legends,'Location','NorthWest')
+subplot(2,1,2);
+Title = ['Estimate on \beta *** p_c = ' num2str(pc,'%.5f')];
+title(Title)
 
 hold off
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% We see that the probability of a sight being set as a function of the
-% cutoff probability is closing up on the value 0.6.
-%
+
+
+% plot the best loglog plot, which is the second last one according to
+% output values in the standard deviation stdev.
+
+% temporarly, it is the last loglog plot that is being replotted...
+figure()
+plot(p(pc_index:end-1),dPdp_mx(:,(lend - lstart -1)),'m-d')
+set(gca,'FontSize',fontsize);
+xlabel('p')
+ylabel('d(ln(P))/d(ln(p))')
+Title = ['Estimate on \beta *** \beta = ' num2str(betas(end-1),'%.2f') ' for L = ' num2str(2^(lend-1),'%g') ];
+title(Title)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% see how well beta fits the P(p,L) distribution
+
+
+figure()
+subplot(1,1,1);
+hold all
+legends1 = {};
+legends2 = {};
+len_betas = length(betas);
+%stdev = zeros(len_betas,1);
+for i=1:len_betas
+    lcount = lstart + i - 1;
+    beta = betas(i);
+    beta_func = (p(:)-pc).^(beta);
+    
+    plot(p(:),beta_func,'-d')
+    %hold on
+    plot(p(:),P(:,lcount),'-o')
+    
+    %set(gca,'FontSize',fontsize)
+    ylabel('P(p,L)')
+    xlabel('p')
+    alegend1 = ['(p-pc)^{\beta} ; \beta = ' num2str(beta,'%.3f')];
+    alegend2 = ['P(p,L=' num2str(2^lcount,'%g') ')'];
+    legends1{end+1} = alegend1;
+    legends1{end+1} = alegend2;
+    drawnow
+    
+    %mean_dev = mean(P(:,lcount)-beta_func(:));
+    %mean_sqrt = mean(sqrt(P(:,lcount)-beta_func(:)));
+    
+    %stdev(i) = sqrt(mean_sqrt/len_betas - (mean_dev/len_betas)^2);
+end
+
+subplot(1,1,1);
+title('Similarity between P(p,L) and (p-pc)^{\beta}')
+%C = [legends1,legends2];
+legend(legends1,'Location','SouthEast')
+hold off
+
+% standard deviations:
+
+
+stdev
+
+
+
 
 
 
