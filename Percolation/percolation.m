@@ -48,9 +48,9 @@ bbox = cat(1,s2.BoundingBox);
 total_area = L*L;
 N_total = num;
 p_c = 0.59275;                 % experimental value of the critical probability cutoff
-p_min = p_c + 0.001;           % p_min > p_c
+p_min = 0.3; %p_c + 0.001;           % p_min > p_c
 nsample = 10;                  % number of grid samples        
-p = (p_min:0.01:1.0);           % probability span
+p = (p_min:0.005:1.0);           % probability span
 nx = size(p,2);                % number of probabilities to run for
 lstart = 3;                    % system size start
 lend = 7;                      % system size stop
@@ -133,7 +133,7 @@ for lcount = lstart:lend
     subplot(2,1,2);
     %title(Title)
     plot(p,Pi(:,lcount),'-o');
-    xlabel('p'); ylabel('Pi(p,L)');
+    xlabel('p'); ylabel('\Pi (p,L)');
     set(gca,'FontSize',fontsize)
     drawnow
 end
@@ -143,9 +143,9 @@ pc = pc/counter
 subplot(2,1,1);
 title('Probability of a site being within a spanning cluster as function of the cutoff probability p')
 subplot(2,1,2);
-Title = ['Probability of percolation. pc ~ ' num2str(pc,'%.2f')];
+Title = ['Probability of percolation. p_c ~ ' num2str(pc,'%.2f')];
 title(Title)
-legend(legends,'Location', 'SouthEast')
+legend(legends,'Location', 'SouthWest')
 hold off
 
 
@@ -241,7 +241,7 @@ plot(p(pc_index:end-1),dPdp_mx(:,(lend - lstart -1)),'m-d')
 set(gca,'FontSize',fontsize);
 xlabel('p')
 ylabel('d(ln(P))/d(ln(p))')
-Title = ['Estimate on \beta *** \beta = ' num2str(betas(end-1),'%.2f') ' for L = ' num2str(2^(lend-1),'%g') ];
+Title = ['Estimate on \beta *** \beta =' num2str(betas(end-1),'%.2f') ' \pm ' num2str(stdev(end-1),'%.3f') ' for L =' num2str(2^(lend-1),'%g') ];
 title(Title)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -261,9 +261,10 @@ for i=1:len_betas
     beta_func = (p(:)-pc).^(beta);
     
     plot(p(:),beta_func,'-d')
+    set(gca,'FontSize',fontsize)
     %hold on
     plot(p(:),P(:,lcount),'-o')
-    
+    set(gca,'FontSize',fontsize)
     %set(gca,'FontSize',fontsize)
     ylabel('P(p,L)')
     xlabel('p')
@@ -282,7 +283,7 @@ end
 subplot(1,1,1);
 title('Similarity between P(p,L) and (p-pc)^{\beta}')
 %C = [legends1,legends2];
-legend(legends1,'Location','SouthEast')
+legend(legends1,'Location','NorthWest')
 hold off
 
 % standard deviations:
