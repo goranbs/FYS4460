@@ -5,7 +5,7 @@
 % From this text file we find n(s,p) which we use to estimate
 % sigma in sxi = |p-pc|^(1/sigma).
 
-fileID = fopen('ClusterNumDensity.txt');
+fileID = fopen('ClusterNumDensity.dat');
 Nsp = textscan(fileID,'%f64 %f64 %f64 %f64 %f64 %f64','delimiter',' ' ,'commentStyle', '\\');
 fclose(fileID);
 

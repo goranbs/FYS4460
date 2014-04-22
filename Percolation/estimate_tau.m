@@ -119,7 +119,7 @@ print(h,'-dpng','Estimate_tau.png')                     % save plot
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % write to file
 
-filename = 'estimate_tau.txt';
+filename = 'estimate_tau.dat';
 fileID = fopen(filename,'w');
 fprintf(fileID,'%33s %.3f %4f \n','\\ tau and its standard deviation',tau,stdev);
 fprintf(fileID, '%12s %8s \n', '\\ log10_nsp','log10_s');

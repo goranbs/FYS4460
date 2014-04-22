@@ -129,7 +129,7 @@ legend(legends,'Location','NorthEast')
 axis([0 6 -13 -2])
 print(h,'-dpng','clusterNRdensity_loglog.png')
 
-filename = 'ClusterNumDensity.txt';
+filename = 'ClusterNumDensity.dat';
 fileID = fopen(filename,'w');
 fprintf(fileID,'%87s \n', '\\Fist line probabilities: p. For column below p: n(s,p). Last cloumn: cluster sizes: s');
 fprintf(fileID,'%.3f %.3f %.3f %.3f %.3f %g\n',probs(1),probs(2),probs(3),probs(4),probs(5),0);
