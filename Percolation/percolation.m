@@ -128,7 +128,6 @@ for lcount = lstart:lend
     set(gca,'FontSize',fontsize)
     drawnow
   
-    
     %title('Probability of a sight being set as a function of the cutoff probability')
     subplot(2,1,2);
     %title(Title)

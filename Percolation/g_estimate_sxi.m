@@ -52,9 +52,31 @@ for i=1:length(p)
     drawnow
 end
 
-Title = ['Estimating s_{\xi}'];
+Title = ['s_{\xi}'];
+name = ['sxi.png'];
 title(Title)
 legend(legends,'Location','SouthWest')
+print(h,'-dpng',name)
+hold off
+
+h = figure();
+hold all
+
+for i=1:length(p)
+    K = 0.5*s(:).^(-tau);
+    
+    plot(log10(s), log10(K),'-')
+    set(gca,'FontSize',fontsize)
+    xlabel('log(s)');ylabel('log(0.5s^{\tau})')
+    drawnow
+end
+
+
+Title = ['Estimating s_{\xi}'];
+name = ['sxi_estimate.png'];
+title(Title)
+legend(legends,'Location','SouthWest')
+print(h,'-dpng',name)
 hold off
 
     

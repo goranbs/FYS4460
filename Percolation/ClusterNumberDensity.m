@@ -15,7 +15,7 @@ z = rand(lx,ly) < pc;
 %
 %       n(s,p) = N(s)/Ld
 
-Nsamples = 50;
+Nsamples = 10000;
 a = 1.2;
 binmax = 10e5;
 [lw,num] = bwlabel(z,4);
@@ -95,7 +95,7 @@ for i = 1:length(probs)
     subplot(1,1,1)
     if probs(i) == pc
         plot(ln_s,ln_n,'-')
-        alegend = ['pc=' num2str(probs(i),'%.3f')];
+        alegend = ['p_c=' num2str(probs(i),'%.3f')];
         legends{end+1} = alegend;
     else
         plot(ln_s,ln_n,'--')
@@ -132,7 +132,7 @@ print(h,'-dpng','clusterNRdensity_loglog.png')
 filename = 'ClusterNumDensity.dat';
 fileID = fopen(filename,'w');
 fprintf(fileID,'%87s \n', '\\Fist line probabilities: p. For column below p: n(s,p). Last cloumn: cluster sizes: s');
-fprintf(fileID,'%.3f %.3f %.3f %.3f %.3f %g\n',probs(1),probs(2),probs(3),probs(4),probs(5),0);
+fprintf(fileID,'%.3f %.3f %.3f %.5f %.3f %g\n',probs(1),probs(2),probs(3),probs(4),probs(5),0);
 dlmwrite(filename,N_bins','-append', 'delimiter', ' ', 'precision', 13)
 
 % figure()
