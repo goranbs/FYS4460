@@ -458,7 +458,7 @@ void integrator(vector <Atom> atoms,
                 int N_cells_x,int N_cells_y,int N_cells_z,
                 double Lcx, double Lcy, double Lcz,
                 vector < list <int> > &box_list,
-                double T_bath){
+                double T_bath,int tmax){
 
     /* *********************************************************************************************
      * Integrator uses the stable Verlet algorithm to calculate the motion of the particles
@@ -472,8 +472,10 @@ void integrator(vector <Atom> atoms,
     vector <double> r (3,0.0);
     vector <double> f (3,0.0);
 
+    bool Part_of_matrix = false;
+
     double dt = 0.02;
-    int tmax = 500;                                            // Number of timesteps !!!!!!!!!!!!!!!!!!!!!!!!
+    //int tmax = 1001;                                            // Number of timesteps !!!!!!!!!!!!!!!!!!!!!!!!
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
@@ -529,7 +531,11 @@ void integrator(vector <Atom> atoms,
                 r[2] = r[2] + Lz;
                 atoms[i].cross_boundary(0,0,-1);
             }
-            atoms[i].update_position(r);
+
+            Part_of_matrix = atoms[i].getIs_matrix();
+            if (Part_of_matrix == false) {              // if an atom is not part of the matrix, then update it's position!
+                atoms[i].update_position(r);
+            }
         }
         Ek = 0;
         Ep = 0;
@@ -558,8 +564,9 @@ void integrator(vector <Atom> atoms,
             for (int k = 0; k < 3; ++k) {
                 v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
             }
-
-            atoms[i].update_velocity(v);
+            if (Part_of_matrix == false) {
+                atoms[i].update_velocity(v);
+            }
 
             r2 = atoms[i].position();
             r0 = atoms[i].return_initial_position();
@@ -636,7 +643,9 @@ void integrator(vector <Atom> atoms,
 /*******************************************************************************************************************************
  *                                        Test with 2 particles
  * ****************************************************************************************************************************/
-void test_2particles(const double Lx, const double Ly, const double Lz, int N_cells_x, int N_cells_y, int N_cells_z, vector < list < int > > &box_list, double T_bath){
+void test_2particles(const double Lx, const double Ly,
+                     const double Lz, int N_cells_x, int N_cells_y, int N_cells_z,
+                     vector < list < int > > &box_list, double T_bath, int tmax){
 
     vector < vector < double > > R (2,vector < double > (3,0));
     vector < vector < double > > V (2,vector < double > (3,0));
@@ -667,7 +676,7 @@ void test_2particles(const double Lx, const double Ly, const double Lz, int N_ce
     clock_t time3;
     time3 = clock();
     //integrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
-    integrator(atoms,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
+    integrator(atoms,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
     time3 = clock() - time3;
 
     cout << "two particles" << endl;
@@ -738,10 +747,10 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
+    int tmax = 301;  // #timesteps
 
-
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0000.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state1000.txt";   // read this state filename
+    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -774,7 +783,7 @@ int main(){
     /*******************************************************************************************
      *              unittesting with only two particles - Atom class                          */
 
-    //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list,T_bath);
+    //test_2particles(Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z, box_list,T_bath,tmax);
     //******************************************************************************************
 
 
@@ -814,7 +823,7 @@ int main(){
 
 
     time2 = clock();
-    integrator(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
+    integrator(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
     t2 = clock() - time2;
     /**************************************************************************************************************
      *                                               OUTPUTS                                                      */

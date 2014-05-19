@@ -9,7 +9,7 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
      *   -nSpheres is the number of spheres in the system
      *   -N is the number of atoms in atoms.
      */
-    nSpheres = 1;
+    //nSpheres = 1;
     spherePos = vector < vector <double> > (nSpheres, vector < double > (3,0));
     sphereRad = vector <double> (nSpheres,0);
     L = vector <double> (3,0);
@@ -23,17 +23,17 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
 
 void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
     double range = R1 - R0;
-    /*for (int n = 0; n < nSpheres; ++n) {
+    for (int n = 0; n < nSpheres; ++n) {
         spherePos[n][0] =  (rand()/float(RAND_MAX))*L[0];
         spherePos[n][1] =  (rand()/float(RAND_MAX))*L[1];
         spherePos[n][2] =  (rand()/float(RAND_MAX))*L[2];
         sphereRad[n] = R0 + (range*rand()/float(RAND_MAX));
 
-    }*/
-    spherePos[0][0] =  0;//L[0]/2.0;
-    spherePos[0][1] =  0;//L[1]/2.0;
-    spherePos[0][2] =  0;//L[2]/2.0;
-    sphereRad[0] = R0 + (range*rand()/float(RAND_MAX));
+    }
+//    spherePos[0][0] =  0;//L[0]/2.0;
+//    spherePos[0][1] =  0;//L[1]/2.0;
+//    spherePos[0][2] =  0;//L[2]/2.0;
+//    sphereRad[0] = R0 + (range*rand()/float(RAND_MAX));
 }
 
 void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres, int &N){
@@ -42,11 +42,11 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
     double Ri, Rx;
     double SphereRad;
 
-
     for (int n = 0; n<nSpheres; n++){                   // for all generated spheres
         auto it = atoms.begin();
         while (it != atoms.end()) {                     // for all atoms in system
             ri = it->position();                        // position of atom i in vector of atoms.
+            it->setIs_matrix(true);
             Ri = 0;
 
             for (int cor = 0; cor < 3; ++cor) {
