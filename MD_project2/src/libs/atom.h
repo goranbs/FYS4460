@@ -21,11 +21,16 @@ public:
     inline const vector<double> &position();
     inline const vector <double> &velocity();
     inline const vector <double> &force();
-    inline const double potential() const;
+    inline const double potential();
+//    inline const double potential() const;
+
     inline const vector <double> &return_initial_position();
     void cross_boundary(int i, int j , int k);
     inline const vector<double> &return_n_crossings() const;
 
+
+    bool getIs_matrix() const;
+    void setIs_matrix(bool value);
 
 private:
     vector <double> r;            // position of atom
@@ -36,6 +41,7 @@ private:
     //vector <double> dist;         // distance traveled.
     double u;                     // total potential
     //int N;
+    bool is_matrix;
 
 };
 
@@ -48,7 +54,7 @@ inline const vector < double > &Atom::velocity(){               // V. return vel
 inline const vector < double > &Atom::force(){                  // F. return force
     return f;
 }
-inline const double Atom::potential() const {                   // P. return potential
+inline const double Atom::potential() {                        // P. return potential
     return u;
 }
 inline const vector<double> &Atom::return_initial_position(){   // R0. return initial position

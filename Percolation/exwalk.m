@@ -1,24 +1,29 @@
 % Example of use of the walk routine
 % Generate spanning cluster (l-r spanning)
 
-function exwalk()
-lx =64;
-ly = 64;
-p = 0.585;
+function [Msc] = exwalk(systemsize,p,plotting)
+
+L = systemsize;
+lx = L;              %64;
+ly = L;              %64;
 ncount = 0;
 perc = [];
 while (size(perc ,1)==0)
     ncount = ncount + 1;
-    if (ncount >1000)
+    if (ncount >3000)
+        message = 'We did not find any percolating cluster with this p and L'
+        p = p
+        L = L
         return
     end
 
     z=rand(lx,ly)<p;
     [lw,num]=bwlabel(z,4);
     perc_x = intersect(lw(1,:),lw(lx ,:));
-    perc = find(perc_x >0)
+    perc = find(perc_x >0);
 end
 
+%Ncount = ncount % check how many counts are necessary to have percolation.
 
 s = regionprops(lw,'Area');
 clusterareas = cat(1,s.Area);
@@ -27,19 +32,43 @@ i = find(clusterareas==maxarea);
 zz = lw == i;
 
 % zz now contains the spanning cluster
-imagesc(zz);
+%imagesc(zz);
 
 % Display spanning cluster
 % Run walk on this cluster
-[l,r] = walk(zz);
+[l,r] = walk(zz);                        % l = left walker, r = right walker.
 zzz = l.*r;
 
 % Find points where both l and r are non-zero
 zadd = zz + zzz;
-subplot(2,2,1), imagesc(zz);
-subplot(2,2,2), imagesc(zadd);
-subplot(2,2,3), imagesc(zzz >0);
-subplot(2,2,4), imagesc(l+r>0);
+% some extra features for showing the left and right walker:
+ll = l > 0;
+ll = ll*3;
+rr = r > 0;
+llrr = ll + rr;
+
+Msc = sum(sum(zzz>0));
+
+% plotting:
+if (plotting > 0)
+    name = 'SAW_exwalk.png';
+    h = figure();
+    hold all
+    subplot(2,2,1), imagesc(zz),set(gca,'Fontsize',16);             % system
+    
+    title('System')
+    subplot(2,2,2), imagesc(zadd),set(gca,'Fontsize',16);           % system with singly connected bonds
+    title('System with singly connected bonds')
+    
+    subplot(2,2,3), imagesc(zzz >0),set(gca,'Fontsize',16);         % just the singly connected bonds
+    title('Singly connected bonds')
+    
+    subplot(2,2,4), imagesc(llrr), set(gca,'Fontsize',16);           % left & rhight walk.
+    title('Left and right walker')
+    
+    print(h,'-dpng',name)
+end
+
 function [left ,right] = walk(z)
 %
 % Left turning walker
@@ -61,14 +90,18 @@ ix0 = 1;
 % stopping point for walker
 % First do left -turning walker
 dirs = zeros(4,2);
-dirs(1,1) = -1;
+dirs(1,1) = -1;      % left
 dirs(1,2) = 0;
-dirs(2,1) = 0;
+
+dirs(2,1) = 0;       % back
 dirs(2,2) = -1;
-dirs(3,1) = 1;
+
+dirs(3,1) = 1;       % right
 dirs(3,2) = 0;
-dirs(4,1) = 0;
+
+dirs(4,1) = 0;       % forward
 dirs(4,2) = 1;
+
 nwalk = 1;
 ix = ix0;
 iy = iy0;

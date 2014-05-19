@@ -13,6 +13,7 @@
 #include <unitconverter.h>
 #include <atom.h>
 #include <initialstate.h>
+#include <generatenanoporoussystem.h>
 
 
 using namespace std;
@@ -48,8 +49,9 @@ double Berendsen(double &tau, double &dt, double &T_bath, double &T);
 
 const double pi = 4*atan(1);
 
-const double b = 5.260;                 // Ångstrøm [Å]
+//const double b = 5.260;                 // Ångstrøm [Å]
 //const double b = 30.0;                  // Ångsrøm [Å]
+const double b = 5.72;                  // Ångstrøm [Å]            - liquid Argon system
 const double mA = 39.948;               // mass of Argon [amu]
 const double kB = 1.480*pow(10,-23);    // Bolzmann constant [eV/K]
 const double eps = 0.01*1.0318;         // Energy constant [eV]
@@ -92,7 +94,7 @@ double random_number(){
     // srand (1);
     // srand (time(NULL))
 
-    double U1 = rand()/float(RAND_MAX);
+    double U1 = rand()/float(RAND_MAX);    // random number in interval [0,1]
     double U2 = rand()/float(RAND_MAX);
     double val = sqrt(-2*log(U1))*cos(2*pi*U2);
     return val;
@@ -341,14 +343,13 @@ void Lennard_Jones(
                     for (int neighbour_index : list_of_neighbours_to_calculate_for_each_box[main_box_index]){
                         // for every neighbour:
 
-
-
                         for (auto it2 = box_list[neighbour_index].begin(); it2 != box_list[neighbour_index].end(); ++it2){
                             // for every particle in neighbour box:
 
                             int j = *it2;
 
                             if (i != j){
+
 
                                 calculate_forces(atoms,i,j,Lx,Ly,Lz,P_sum);
 
@@ -472,7 +473,7 @@ void integrator(vector <Atom> atoms,
     vector <double> f (3,0.0);
 
     double dt = 0.02;
-    int tmax = 500;
+    int tmax = 500;                                            // Number of timesteps !!!!!!!!!!!!!!!!!!!!!!!!
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
@@ -726,7 +727,7 @@ int main(){
     int N;
     int Nx, Ny, Nz;     // number of origins
     double Lx,Ly,Lz;    // lattice length
-    int kappa = 10;     //
+    int kappa = 20;     //
     double r_cut;       // cutoff lenght
     double density;     // density of system
 
@@ -739,8 +740,8 @@ int main(){
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
 
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0999.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0000.txt";   // read this state filename
+    int RunFromFile = 1;                 // use filename as initial state
 
     Nx = kappa;
     Ny = kappa;
@@ -749,7 +750,7 @@ int main(){
     Ly = Ny*length;
     Lz = Nz*length;
 
-    r_cut = 3;           // cutoff length for when we assume the Lennard Jones interaction is negligible
+    r_cut = 3;           // cutoff length for where we assume the Lennard Jones interaction is negligible. (at 3sigma).
 
     Lcx = r_cut;
     Lcy = r_cut;
@@ -783,6 +784,16 @@ int main(){
         time3 = clock()-time3;
         t3 = double(time3)/CLOCKS_PER_SEC;
         cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
+        double R0,R1;
+        int nSpheres;
+        nSpheres = 20;
+        R0 = 20.0/3.405;
+        R1 = 30.0/3.405;
+        GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
+        string name;
+        name = "porous_system.txt";
+        N = atoms.size();
+        write_to_file(atoms,box_list,name,N,0);
     }
 
     else{

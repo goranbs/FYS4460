@@ -34,6 +34,16 @@ void Atom::cross_boundary(int i, int j, int k){
     n_crossings[2] += k;
 }
 
+bool Atom::getIs_matrix() const
+{
+    return is_matrix;
+}
+
+void Atom::setIs_matrix(bool value)
+{
+    is_matrix = value;
+}
+
 
 
 void Atom::update_position(const vector <double> &r_){          // R. reset postion

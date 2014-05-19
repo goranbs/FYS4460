@@ -3,6 +3,10 @@
 #include <unitconverter.h>
 #include <iostream>
 #include <list>
+#include <readinitialstatefile.h>
+#include <generatenanoporoussystem.h>
+#include <string>
+#include <unitconverter.h>
 
 TEST(Atom) {
     Atom argon({1,2,3},{1,2,3},{0.1,0.1,0.1},0.0);
@@ -195,7 +199,33 @@ TEST(test2particles){
     CHECK(2==2);
 }
 */
+/*
+TEST(generateNanoPorousSystem_1){
+    // 1) Load thermalized system file
+     // 2) create nanoporous system using GenerateNanoPorousSystem
+     // 3) create outputfile to be visualized.
+     //
 
+    double b = 5.72; // [Å]
+    double R0,R1,Lx,Ly,Lz;
+    int nSpheres,N;
+
+    R0 = 20; // [Å]
+    R1 = 30; // [Å]
+    UnitConverter R_0;
+    UnitConverter R_1;
+    R0 = R_0.from_aangstrom(R0); // [MD units]
+    R1 = R_1.from_aangstrom(R1); // [MD units]
+
+    string filename;
+    filename = "state0499.txt";
+    ReadInitialStateFile initialstate(filename);
+    vector <Atom> atoms = initialstate.ReturnInitialState();
+
+    GenerateNanoPorousSystem porosSyst(atoms,R0,R1,Lx,Ly,Lz,nSpheres,N);
+
+}
+*/
 int main() {
 
     return UnitTest::RunAllTests();
