@@ -499,12 +499,12 @@ void integrator(vector <Atom> atoms,
             for (int k = 0; k < 3; ++k) {
                 v[k] = v[k] + f[k]*(dt/2*m);
             }
+            // for update of the velocity, see update of position.
+            // the reason for moving it, is to put it inside the same if test as for the update of the positions
 
-            atoms[i].update_velocity(v);
-            for (int k = 0; k < 3; ++k) {
+            for (int k = 0; k < 3; ++k) {  // update the positions
                 r[k] = r[k] + v[k]*dt;
             }
-
             // Adjust positions after periodic boundary conditions
             if (r[0] > Lx){
                 r[0] = r[0] - Lx;
@@ -534,8 +534,10 @@ void integrator(vector <Atom> atoms,
 
             Part_of_matrix = atoms[i].getIs_matrix();
             if (Part_of_matrix == false) {              // if an atom is not part of the matrix, then update it's position!
-                atoms[i].update_position(r);
+                atoms[i].update_position(r);            // because, then it is a part of the fluid.
+                atoms[i].update_velocity(v);
             }
+
         }
         Ek = 0;
         Ep = 0;
@@ -559,14 +561,22 @@ void integrator(vector <Atom> atoms,
         }
 
         for (int i = 0; i < N; ++i) {
-            v = atoms[i].velocity();                  // v changes for every iteration, so we need this call!
+            v = atoms[i].velocity();                    // v changes for every iteration, so we need this call!
             f = atoms[i].force();
-            for (int k = 0; k < 3; ++k) {
-                v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
+
+            Part_of_matrix = atoms[i].getIs_matrix();
+            if (Part_of_matrix == false) {             // if a particle is not part of the matrix
+                for (int k = 0; k < 3; ++k) {
+                    v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
+                }
+                atoms[i].update_velocity(v);           // it's part of the fluid, and it's velocity should be updated
             }
-            if (Part_of_matrix == false) {
-                atoms[i].update_velocity(v);
+            /*
+            else if (Part_of_matrix == true){
+                //atoms[i].update_velocity({0.0, 0.0, 0.0});  // if it is part of the matrix, then it's velocity is zero.
+                v = atoms[i].velocity();                      // the velocity should be set to zero when defined as part of mx.
             }
+*/
 
             r2 = atoms[i].position();
             r0 = atoms[i].return_initial_position();
@@ -747,9 +757,9 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
-    int tmax = 301;  // #timesteps
+    int tmax = 101;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state1000.txt";   // read this state filename
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0100.txt";   // read this state filename
     int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;

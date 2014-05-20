@@ -63,9 +63,12 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
 
             Ri = sqrt(Ri);
             SphereRad = sphereRad[n];
-            if (Ri <= sphereRad[n]) {                    // if distance from center of sphere, less than sphere radius:
-                it = atoms.erase(it);                   // erase atom from vector of atoms.
+            if (Ri <= sphereRad[n]) {                      // if distance from center of sphere, less than sphere radius:
+                //it = atoms.erase(it);                    // erase atom from vector of atoms.
+                // esase atom to just have a look at the matrix.
                 //cout << "object erased!!" << endl;
+                it->setIs_matrix(false);
+                ++it;
 
             }
             else{

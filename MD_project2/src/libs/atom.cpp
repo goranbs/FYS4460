@@ -23,6 +23,8 @@ Atom::Atom(vector < double > r_, vector < double > v_, vector < double > f_, dou
     f = f_;
     r0 = r_;
 
+    setIs_matrix(false);  // default
+
 }
 
 void Atom::cross_boundary(int i, int j, int k){
@@ -41,6 +43,7 @@ bool Atom::getIs_matrix() const
 
 void Atom::setIs_matrix(bool value)
 {
+    update_velocity({0,0,0});
     is_matrix = value;
 }
 
