@@ -21,6 +21,14 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
     create_pores(atoms,nSpheres,N);
 }
 
+void GenerateNanoPorousSystem::cylinder(double &R){
+    // create cylinder that goes throough the system.
+    // make all surrounding particles part of the matrix
+    // 1) remove particles in the cylinder, or
+    // 2) make particles in cylinder part of fluid.
+
+}
+
 void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
     double range = R1 - R0;
     for (int n = 0; n < nSpheres; ++n) {

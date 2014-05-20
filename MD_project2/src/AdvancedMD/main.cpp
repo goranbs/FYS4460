@@ -757,7 +757,7 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
-    int tmax = 101;  // #timesteps
+    int tmax = 2001;  // #timesteps
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0100.txt";   // read this state filename
     int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
