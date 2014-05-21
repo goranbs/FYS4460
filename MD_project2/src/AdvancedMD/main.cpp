@@ -759,11 +759,10 @@ int main(){
     double T_bath;
     T_bath = 0.851;
     //T_bath = 1.05;
-    int tmax = 100;  // #timesteps
+    int tmax = 2001;  // #timesteps
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0500.txt";   // read this state filename
-
-    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
+    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -834,6 +833,7 @@ int main(){
             Atom argon(R[atom],V[atom],F[atom],0.0);
             atoms.push_back(argon);
         }
+        Nfluid = N;
     }
 
 
