@@ -17,52 +17,70 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
     L[1] = Ly;
     L[2] = Lz;
 
-    // create spheres:
-    spheres(R0,R1,nSpheres); // create spheres
-    create_pores(atoms,nSpheres,N);
+
+    // create shpere holes:
+    //spheres(R0,R1,nSpheres); // create spheres
+    //create_pores(atoms,nSpheres,N);
 
     //create cylinder:
-    //cylinder(atoms,R1);
+    cylinder(atoms,R1);
 }
 
-void GenerateNanoPorousSystem::cylinder(vector < Atom > &atoms, double &R){
+void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
+
     // create cylinder that goes throough the system.
     // make all surrounding particles part of the matrix
     // 1) remove particles in the cylinder, or
     // 2) make particles in cylinder part of fluid.
 
-    vector < double > r (3,0);
-    vector < double > Rc (2,0);
+
+    vector <double> r (3,0);
     double Rx,Ri;
-    Rc = {L[0]/2.0, L[1]/2.0};
+    double random;
+
+    NumberOfFreeParticles = 0;
+
 
     auto it = atoms.begin();
     while (it != atoms.end()) {
         r = it->position();
-        Ri = 0.0;
-        Rx = 0.0;
+
+        Rx = 0;
+        Ri = 0;
         for (int cor = 0; cor < 2; ++cor) {
-            Rx = Rc[cor] - r[cor];
-            if (Rx < -L[cor]/2.0) {
-                Rx = Rx + L[cor];
-            }
-            else if (Rx > L[cor]/2.0) {
-                Rx = Rx - L[cor];
-            }
-            Ri = Ri + Rx*Rx;
+            Rx = L[cor]/2.0 - r[cor];
+
+            // minimum image convention:
+            if (Rx < -(L[cor]/2.0)) { Rx = Rx + L[cor];}
+            else if (Rx > (L[cor]/2.0)) { Rx = Rx - L[cor];}
+
+            Ri += Rx*Rx;
         }
         Ri = sqrt(Ri);
-        if (Ri > R) {                            // all atoms outside the cylinder
+
+        if (Ri > R) {
             //it = atoms.erase(it);
-            //it->setIs_matrix(true);
+            it->setIs_matrix(true);
             ++it;
         }
-        else{  // all atoms within cylinder
-            it = atoms.erase(it);
-            //it->setIs_matrix(true);
-            //++it;
+        else{
+            //it = atoms.erase(it);
+            // we should decrease its density to its half! 50/50 chance of keeping the atom should do the trick.
+            random = rand()/float(RAND_MAX); // random number in range [0,1].
+            if (random < 0.8) {
+                it = atoms.erase(it);
+
+            }
+            else{
+                it->setIs_matrix(false);
+                NumberOfFreeParticles += 1;
+                ++it;
+            }
+
         }
+
     }
+
 }
 
 void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
@@ -82,15 +100,17 @@ void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
 
 void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres, int &N){
     vector < double > ri (3,0);
-
+    vector <int> indexes;
     double Ri, Rx;
     double SphereRad;
+
+    NumberOfFreeParticles = 0;
 
     for (int n = 0; n<nSpheres; n++){                   // for all generated spheres
         auto it = atoms.begin();
         while (it != atoms.end()) {                     // for all atoms in system
-            ri = it->position();                        // position of atom i in vector of atoms.
-            //it->setIs_matrix(true);                   // all atoms part of matrix
+
+            ri = it->position();                        // position of atom i in vector of atoms
             Ri = 0;
 
             for (int cor = 0; cor < 3; ++cor) {
@@ -107,20 +127,39 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
 
             Ri = sqrt(Ri);
             SphereRad = sphereRad[n];
-            if (Ri <= sphereRad[n]) {                      // if distance from center of sphere, less than sphere radius:
-                //it = atoms.erase(it);                    // erase atom from vector of atoms.
+
+            if (Ri <= SphereRad) {                       // if distance from center of sphere, less than sphere radius:
+                it = atoms.erase(it);                    // erase atom from vector of atoms.
                 // esase atom to just have a look at the matrix.
-                //cout << "object erased!!" << endl;
-                //it->setIs_matrix(false);                   // atom part of fluid
-                it->setIs_matrix(true);                      // atom part of matrix
+                //cout << "object erased!!" << endl;   
+            }
+
+            else {                                       // if distance from center of sphere is greater than sphere radius:
+                it->setIs_matrix(true);
+                NumberOfFreeParticles += 1;
                 ++it;
 
             }
-            else{  // all atoms outside the spheres
-                it = atoms.erase(it);
-                //++it;
+
+            //If we want to use the spheres as the matrix, we need to keep track on which particles that are within the spheres.
+            /*if (Ri <= SphereRad) {
+                indexes.push_back(*it);
             }
+            for (int i = 0; i < indexes.size(); ++i) {
+                atoms[indexes(i)].setIs_matrix(true);   // the atoms which are within the spheres is part of the matrix.
+            }*/
         }
     }
 }
 
+int GenerateNanoPorousSystem::numberOfFreeParticles(){
+    return NumberOfFreeParticles;
+}
+double GenerateNanoPorousSystem::density(){
+    // density of the fluid
+    return dens;
+}
+double GenerateNanoPorousSystem::volume(){
+    // volume of the fluid
+    return vol;
+}

@@ -97,7 +97,7 @@ double random_number(){
     double U1 = rand()/float(RAND_MAX);    // random number in interval [0,1]
     double U2 = rand()/float(RAND_MAX);
     double val = sqrt(-2*log(U1))*cos(2*pi*U2);
-    return val;
+    return 10*val;
 }
 
 
@@ -454,7 +454,7 @@ vector < double > Time_vec ;
 vector < double > Pressure ;
 
 void integrator(vector <Atom> atoms,
-                const int N,
+                const int N, const int Nfluid,
                 double Lx, double Ly, double Lz,
                 int N_cells_x,int N_cells_y,int N_cells_z,
                 double Lcx, double Lcy, double Lcz,
@@ -575,18 +575,20 @@ void integrator(vector <Atom> atoms,
                 atoms[i].update_velocity(v);           // it's part of the fluid, and it's velocity should be updated
             }
 
-            // else if atom is part of matrix, the velocity should remain zero, therefore we do nothing.
 
-            r2 = atoms[i].position();
-            r0 = atoms[i].return_initial_position();
-            n_crossings = atoms[i].return_n_crossings();
+            if (Part_of_matrix == false) {
+                r2 = atoms[i].position();
+                //r2 = atoms[i].return_initial_position();
+                r0 = atoms[i].return_initial_position();
+                n_crossings = atoms[i].return_n_crossings();
 
-            for (int ijk = 0; ijk < 3; ++ijk) {
-                mean_disp[i][ijk] += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
+                for (int ijk = 0; ijk < 3; ++ijk) {
+                    mean_disp[i][ijk] += (r2[ijk] - r0[ijk] + n_crossings[ijk]*Lx)*(r2[ijk] -  r0[ijk] + n_crossings[ijk]*Lx);
+                }
+
+                Ek += 0.5*m*(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]); // total kinetic energy
+                Ep += atoms[i].potential();                      // potential energy
             }
-
-            Ek += 0.5*m*(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]); // total kinetic energy
-            Ep += atoms[i].potential();                      // potential energy
         }
         double rmsq = 0;
         for (int i = 0; i < N; ++i) {
@@ -595,13 +597,13 @@ void integrator(vector <Atom> atoms,
             }
         }
 
-        rmsq = rmsq/N;                             // rms traveled distance.
+        rmsq = rmsq/Nfluid;                        // rms traveled distance.
         r_msq_t.push_back(rmsq);
         Time_vec.push_back(t*dt/Time_0);           // [fs]
         E_system.push_back(Ek+Ep);                 // Energy of the system.
         Ekin.push_back(Ek);                        // kinetic energy at time t
         Epot.push_back(Ep);                        // potential energy at time t
-        tempi = 2*Ek/(3.0*N);
+        tempi = 2*Ek/(3.0*Nfluid);
         Temperature.push_back(tempi);              // Temperature
         Press = (N*tempi + P_sum/3);               // Pressure
         Pressure.push_back(Press);                 // Pressure
@@ -685,7 +687,7 @@ void test_2particles(const double Lx, const double Ly,
     clock_t time3;
     time3 = clock();
     //integrator(V,R,F,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath);
-    integrator(atoms,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
+    integrator(atoms,2,2,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
     time3 = clock() - time3;
 
     cout << "two particles" << endl;
@@ -742,7 +744,7 @@ int main(){
     vector < Atom > atoms;          // atom holds information about particle
     vector <double> U;              // Potential energy for particle
 
-    int N;
+    int N, Nfluid;      // #particles in system, #particles in fluid.
     int Nx, Ny, Nz;     // number of origins
     double Lx,Ly,Lz;    // lattice length
     int kappa = 20;     //
@@ -756,11 +758,11 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     T_bath = 0.851;
-    //T_bath = 1.05;   // matrix temp
-    //T_bath = 1.5;    // fluid temp
+    //T_bath = 1.05;
     int tmax = 100;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0331.txt";   // read this state filename
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0500.txt";   // read this state filename
+
     int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
@@ -804,12 +806,14 @@ int main(){
         time3 = clock()-time3;
         t3 = double(time3)/CLOCKS_PER_SEC;
         cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
+
         double R0,R1;
         int nSpheres;
         nSpheres = 20;
         R0 = 20.0/3.405;
         R1 = 30.0/3.405;
         GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
+        Nfluid = porousSys.numberOfFreeParticles();
         string name;
         name = "porous_system.txt";
         N = atoms.size();
@@ -834,7 +838,7 @@ int main(){
 
 
     time2 = clock();
-    integrator(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
+    integrator(atoms,N,Nfluid,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);
     t2 = clock() - time2;
     /**************************************************************************************************************
      *                                               OUTPUTS                                                      */
@@ -843,7 +847,7 @@ int main(){
     else cout << "Initialize used time= " << t1 << " seconds" << endl;
     cout << "Integrator used time= " << double(t2)/CLOCKS_PER_SEC << " seconds" << endl;
     cout << "____________________________________________________________________________________________" << endl;
-    cout << "#Particles = " << N << " #Boxes =" << N_boxes << endl;
+    cout << "#Particles= " << N << "#Particles part of fluid= " << Nfluid << " #Boxes =" << N_boxes << endl;
     cout << "System density= " << N/(Lx*Ly*Lz) << " system volume = " << Lx*Ly*Lz << " T_bath= " << T_bath << endl;
     cout << "____________________________________________________________________________________________" << endl;
     return 0;
