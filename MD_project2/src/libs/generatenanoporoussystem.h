@@ -13,6 +13,9 @@ class GenerateNanoPorousSystem
 {
 public:
     GenerateNanoPorousSystem(vector <Atom >&atoms, double &R0, double &R1, double &Lx, double &Ly, double &Lz, int &nSpheres, int &N);
+    int numberOfFreeParticles();
+    double density();
+    double volume();
 
 private:
     void cylinder(vector <Atom> &atoms, double &R);
@@ -21,6 +24,10 @@ private:
     vector < vector < double > > spherePos;
     vector <double> sphereRad;
     vector <double> L;
+    int NumberOfFreeParticles;
+    double dens;
+    double vol;
+
 
 };
 

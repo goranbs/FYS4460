@@ -147,3 +147,11 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
 int GenerateNanoPorousSystem::numberOfFreeParticles(){
     return NumberOfFreeParticles;
 }
+double GenerateNanoPorousSystem::density(){
+    // density of the fluid
+    return dens;
+}
+double GenerateNanoPorousSystem::volume(){
+    // volume of the fluid
+    return vol;
+}
