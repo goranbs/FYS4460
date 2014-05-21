@@ -17,15 +17,51 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
     L[1] = Ly;
     L[2] = Lz;
 
-    spheres(R0,R1,nSpheres); // create spheres
-    create_pores(atoms,nSpheres,N);
+    // create shpere holes:
+    //spheres(R0,R1,nSpheres); // create spheres
+    //create_pores(atoms,nSpheres,N);
+
+    //create cylinder:
+    cylinder(atoms,R1);
 }
 
-void GenerateNanoPorousSystem::cylinder(double &R){
+void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
     // create cylinder that goes throough the system.
     // make all surrounding particles part of the matrix
     // 1) remove particles in the cylinder, or
     // 2) make particles in cylinder part of fluid.
+
+    vector <double> r (3,0);
+    double Rx,Ri;
+
+    auto it = atoms.begin();
+    while (it != atoms.end()) {
+        r = it->position();
+        Rx = 0;
+        Ri = 0;
+        for (int cor = 0; cor < 2; ++cor) {
+            Rx = L[cor]/2.0 - r[cor];
+
+            // minimum image convention:
+            if (Rx < -(L[cor]/2.0)) { Rx = Rx + L[cor];}
+            else if (Rx > (L[cor]/2.0)) { Rx = Rx - L[cor];}
+
+            Ri += Rx*Rx;
+        }
+        Ri = sqrt(Ri);
+
+        if (Ri > R) {
+            //it = atoms.erase(it);
+            it->setIs_matrix(true);
+            ++it;
+        }
+        else{
+            it = atoms.erase(it);
+            //it->setIs_matrix(true);
+            //++it;
+        }
+
+    }
 
 }
 
@@ -54,7 +90,7 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
         auto it = atoms.begin();
         while (it != atoms.end()) {                     // for all atoms in system
             ri = it->position();                        // position of atom i in vector of atoms.
-            it->setIs_matrix(true);
+            //it->setIs_matrix(true);
             Ri = 0;
 
             for (int cor = 0; cor < 3; ++cor) {
@@ -71,18 +107,16 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
 
             Ri = sqrt(Ri);
             SphereRad = sphereRad[n];
-            if (Ri <= sphereRad[n]) {                      // if distance from center of sphere, less than sphere radius:
-                //it = atoms.erase(it);                    // erase atom from vector of atoms.
-                // esase atom to just have a look at the matrix.
-                //cout << "object erased!!" << endl;
-                it->setIs_matrix(false);
-                ++it;
 
+            if (Ri <= SphereRad) {                       // if distance from center of sphere, less than sphere radius:
+                it = atoms.erase(it);                    // erase atom from vector of atoms.
+                // esase atom to just have a look at the matrix.
+                //cout << "object erased!!" << endl;   
             }
-            else{
+            else {                                       // if distance from center of sphere is greater than sphere radius:
+                it->setIs_matrix(true);
                 ++it;
             }
         }
     }
 }
-

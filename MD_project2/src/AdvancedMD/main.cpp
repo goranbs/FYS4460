@@ -466,7 +466,6 @@ void integrator(vector <Atom> atoms,
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
 
-    vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
     vector <double> r2 (3,0.0);
     vector <double> v (3,0.0);
     vector <double> r (3,0.0);
@@ -559,6 +558,8 @@ void integrator(vector <Atom> atoms,
             // empty bins.
             bins[bin] = 0;
         }
+
+        vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
 
         for (int i = 0; i < N; ++i) {
             v = atoms[i].velocity();                    // v changes for every iteration, so we need this call!
@@ -756,11 +757,12 @@ int main(){
 
     // T_bath - Temperature of external heat bath
     double T_bath;
-    T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
-    int tmax = 2001;  // #timesteps
+    T_bath = 0.851;
+    //T_bath = 1.05;
+    int tmax = 100;  // #timesteps
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0100.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
+    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
