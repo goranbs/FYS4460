@@ -97,7 +97,7 @@ double random_number(){
     double U1 = rand()/float(RAND_MAX);    // random number in interval [0,1]
     double U2 = rand()/float(RAND_MAX);
     double val = sqrt(-2*log(U1))*cos(2*pi*U2);
-    return val;
+    return 10*val;
 }
 
 
@@ -580,6 +580,7 @@ void integrator(vector <Atom> atoms,
 */
 
             r2 = atoms[i].position();
+            //r2 = atoms[i].return_initial_position();
             r0 = atoms[i].return_initial_position();
             n_crossings = atoms[i].return_n_crossings();
 
@@ -608,7 +609,8 @@ void integrator(vector <Atom> atoms,
         Press = (N*tempi + P_sum/3);               // Pressure
         Pressure.push_back(Press);                 // Pressure
 
-        gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
+        //gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
+        gamma = 1.0;
         //Andersen(tau, dt, T_bath, V, atoms);
 
         cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
@@ -761,7 +763,7 @@ int main(){
     //T_bath = 1.05;
     int tmax = 100;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0100.txt";   // read this state filename
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0500.txt";   // read this state filename
     int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
@@ -805,6 +807,7 @@ int main(){
         time3 = clock()-time3;
         t3 = double(time3)/CLOCKS_PER_SEC;
         cout << "ReadInitialState used time= "<< t3 << " seconds" << endl;
+
         double R0,R1;
         int nSpheres;
         nSpheres = 20;

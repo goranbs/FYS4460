@@ -33,6 +33,9 @@ void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
 
     vector <double> r (3,0);
     double Rx,Ri;
+    double random;
+
+    NumberOfFreeParticles = 0;
 
     auto it = atoms.begin();
     while (it != atoms.end()) {
@@ -56,9 +59,19 @@ void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
             ++it;
         }
         else{
-            it = atoms.erase(it);
-            //it->setIs_matrix(true);
-            //++it;
+            //it = atoms.erase(it);
+            // we should decrease its density to its half! 50/50 chance of keeping the atom should do the trick.
+            random = rand()/float(RAND_MAX); // random number in range [0,1].
+            if (random < 0.8) {
+                it = atoms.erase(it);
+
+            }
+            else{
+                it->setIs_matrix(false);
+                NumberOfFreeParticles += 1;
+                ++it;
+            }
+
         }
 
     }
@@ -82,15 +95,16 @@ void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
 
 void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres, int &N){
     vector < double > ri (3,0);
-
+    vector <int> indexes;
     double Ri, Rx;
     double SphereRad;
+
+    NumberOfFreeParticles = 0;
 
     for (int n = 0; n<nSpheres; n++){                   // for all generated spheres
         auto it = atoms.begin();
         while (it != atoms.end()) {                     // for all atoms in system
-            ri = it->position();                        // position of atom i in vector of atoms.
-            //it->setIs_matrix(true);
+            ri = it->position();                        // position of atom i in vector of atoms
             Ri = 0;
 
             for (int cor = 0; cor < 3; ++cor) {
@@ -115,8 +129,21 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
             }
             else {                                       // if distance from center of sphere is greater than sphere radius:
                 it->setIs_matrix(true);
+                NumberOfFreeParticles += 1;
                 ++it;
             }
+
+            //If we want to use the spheres as the matrix, we need to keep track on which particles that are within the spheres.
+            /*if (Ri <= SphereRad) {
+                indexes.push_back(*it);
+            }
+            for (int i = 0; i < indexes.size(); ++i) {
+                atoms[indexes(i)].setIs_matrix(true);   // the atoms which are within the spheres is part of the matrix.
+            }*/
         }
     }
+}
+
+int GenerateNanoPorousSystem::numberOfFreeParticles(){
+    return NumberOfFreeParticles;
 }
