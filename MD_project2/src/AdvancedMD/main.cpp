@@ -164,7 +164,7 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
      * - initial particle positions   - fcc
      * - initial particle velocities  - Boltzmann distibution
      */
-
+    //double gamma;  // scaling factor for the initial velocity according to temperature.
     double x,y,z;
     int natom,N_atoms;
 
@@ -177,6 +177,7 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
+    //gamma = (3.0/2.0)*N*T_bath/m;
 
     /*****************************************************************************
      *               Initial positions and velocities                            */
@@ -466,7 +467,6 @@ void integrator(vector <Atom> atoms,
      *  Creates a new state file: stateXXX.xyz for every loop iteration while t < tmax.
      */
 
-    vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
     vector <double> r2 (3,0.0);
     vector <double> v (3,0.0);
     vector <double> r (3,0.0);
@@ -535,7 +535,7 @@ void integrator(vector <Atom> atoms,
             Part_of_matrix = atoms[i].getIs_matrix();
             if (Part_of_matrix == false) {              // if an atom is not part of the matrix, then update it's position!
                 atoms[i].update_position(r);            // because, then it is a part of the fluid.
-                atoms[i].update_velocity(v);
+                atoms[i].update_velocity(v);            // at the same time, update it's velocity.
             }
 
         }
@@ -560,23 +560,22 @@ void integrator(vector <Atom> atoms,
             bins[bin] = 0;
         }
 
+        vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
+
         for (int i = 0; i < N; ++i) {
+
             v = atoms[i].velocity();                    // v changes for every iteration, so we need this call!
             f = atoms[i].force();
 
             Part_of_matrix = atoms[i].getIs_matrix();
             if (Part_of_matrix == false) {             // if a particle is not part of the matrix
                 for (int k = 0; k < 3; ++k) {
-                    v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));
+                    v[k] = gamma*(v[k] + f[k]*(dt/(2*m)));  // this is the new velocity.
                 }
                 atoms[i].update_velocity(v);           // it's part of the fluid, and it's velocity should be updated
             }
-            /*
-            else if (Part_of_matrix == true){
-                //atoms[i].update_velocity({0.0, 0.0, 0.0});  // if it is part of the matrix, then it's velocity is zero.
-                v = atoms[i].velocity();                      // the velocity should be set to zero when defined as part of mx.
-            }
-*/
+
+            // else if atom is part of matrix, the velocity should remain zero, therefore we do nothing.
 
             r2 = atoms[i].position();
             r0 = atoms[i].return_initial_position();
@@ -756,11 +755,13 @@ int main(){
 
     // T_bath - Temperature of external heat bath
     double T_bath;
-    T_bath = 0.851;   // this is in Kelvin !!!!! No it's not :-) Not anymore :-)
-    int tmax = 2001;  // #timesteps
+    T_bath = 0.851;
+    //T_bath = 1.05;   // matrix temp
+    //T_bath = 1.5;    // fluid temp
+    int tmax = 100;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0100.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0331.txt";   // read this state filename
+    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;

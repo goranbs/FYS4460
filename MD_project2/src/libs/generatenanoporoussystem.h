@@ -15,6 +15,7 @@ public:
     GenerateNanoPorousSystem(vector <Atom >&atoms, double &R0, double &R1, double &Lx, double &Ly, double &Lz, int &nSpheres, int &N);
 
 private:
+    void cylinder(vector<Atom> &atoms, double &R);
     void spheres(double &R0, double &R1, int &nSpheres);
     void create_pores(vector <Atom> &atoms, int &nSpheres, int &N);
     vector < vector < double > > spherePos;

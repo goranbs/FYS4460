@@ -17,16 +17,52 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
     L[1] = Ly;
     L[2] = Lz;
 
+    // create spheres:
     spheres(R0,R1,nSpheres); // create spheres
     create_pores(atoms,nSpheres,N);
+
+    //create cylinder:
+    //cylinder(atoms,R1);
 }
 
-void GenerateNanoPorousSystem::cylinder(double &R){
+void GenerateNanoPorousSystem::cylinder(vector < Atom > &atoms, double &R){
     // create cylinder that goes throough the system.
     // make all surrounding particles part of the matrix
     // 1) remove particles in the cylinder, or
     // 2) make particles in cylinder part of fluid.
 
+    vector < double > r (3,0);
+    vector < double > Rc (2,0);
+    double Rx,Ri;
+    Rc = {L[0]/2.0, L[1]/2.0};
+
+    auto it = atoms.begin();
+    while (it != atoms.end()) {
+        r = it->position();
+        Ri = 0.0;
+        Rx = 0.0;
+        for (int cor = 0; cor < 2; ++cor) {
+            Rx = Rc[cor] - r[cor];
+            if (Rx < -L[cor]/2.0) {
+                Rx = Rx + L[cor];
+            }
+            else if (Rx > L[cor]/2.0) {
+                Rx = Rx - L[cor];
+            }
+            Ri = Ri + Rx*Rx;
+        }
+        Ri = sqrt(Ri);
+        if (Ri > R) {                            // all atoms outside the cylinder
+            //it = atoms.erase(it);
+            //it->setIs_matrix(true);
+            ++it;
+        }
+        else{  // all atoms within cylinder
+            it = atoms.erase(it);
+            //it->setIs_matrix(true);
+            //++it;
+        }
+    }
 }
 
 void GenerateNanoPorousSystem::spheres(double &R0, double &R1, int &nSpheres){
@@ -54,7 +90,7 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
         auto it = atoms.begin();
         while (it != atoms.end()) {                     // for all atoms in system
             ri = it->position();                        // position of atom i in vector of atoms.
-            it->setIs_matrix(true);
+            //it->setIs_matrix(true);                   // all atoms part of matrix
             Ri = 0;
 
             for (int cor = 0; cor < 3; ++cor) {
@@ -75,12 +111,14 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
                 //it = atoms.erase(it);                    // erase atom from vector of atoms.
                 // esase atom to just have a look at the matrix.
                 //cout << "object erased!!" << endl;
-                it->setIs_matrix(false);
+                //it->setIs_matrix(false);                   // atom part of fluid
+                it->setIs_matrix(true);                      // atom part of matrix
                 ++it;
 
             }
-            else{
-                ++it;
+            else{  // all atoms outside the spheres
+                it = atoms.erase(it);
+                //++it;
             }
         }
     }
