@@ -37,8 +37,10 @@ void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
     vector <double> r (3,0);
     double Rx,Ri;
     double random;
+    double pi = 4*atan(1);
 
     NumberOfFreeParticles = 0;
+    vol = (pi*R*R)*L[2];
 
 
     auto it = atoms.begin();
@@ -157,6 +159,12 @@ int GenerateNanoPorousSystem::numberOfFreeParticles(){
 }
 double GenerateNanoPorousSystem::density(){
     // density of the fluid
+    if (vol !=0){
+    dens = numberOfFreeParticles()/volume();
+    }
+    else {
+        dens = 2147483648;
+    }
     return dens;
 }
 double GenerateNanoPorousSystem::volume(){
