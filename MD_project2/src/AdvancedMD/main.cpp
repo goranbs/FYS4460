@@ -744,12 +744,14 @@ int main(){
     vector < Atom > atoms;          // atom holds information about particle
     vector <double> U;              // Potential energy for particle
 
-    int N, Nfluid;      // #particles in system, #particles in fluid.
-    int Nx, Ny, Nz;     // number of origins
-    double Lx,Ly,Lz;    // lattice length
-    int kappa = 20;     //
-    double r_cut;       // cutoff lenght
-    double density;     // density of system
+    int N, Nfluid;         // #particles in system, #particles in fluid.
+    int Nx, Ny, Nz;        // number of origins
+    double Lx,Ly,Lz;       // lattice length
+    int kappa = 20;        //
+    double r_cut;          // cutoff lenght
+    double density;        // density of system
+    double fluid_dens = 0; // density of fluid
+    double fluid_vol = 0;  // volume of fluid space
 
     // Cells
     double Lcx,Lcy,Lcz;                            // length of cell
@@ -758,11 +760,11 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     T_bath = 0.851;
-    //T_bath = 1.05;
-    int tmax = 2001;  // #timesteps
+    T_bath = 1.05;
+    int tmax = 2000;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state0500.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state2000.txt";   // read this state filename
+    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -813,6 +815,8 @@ int main(){
         R1 = 30.0/3.405;
         GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
         Nfluid = porousSys.numberOfFreeParticles();
+        fluid_vol = porousSys.volume();
+        fluid_dens = porousSys.density();
         string name;
         name = "porous_system.txt";
         N = atoms.size();
@@ -847,8 +851,9 @@ int main(){
     else cout << "Initialize used time= " << t1 << " seconds" << endl;
     cout << "Integrator used time= " << double(t2)/CLOCKS_PER_SEC << " seconds" << endl;
     cout << "____________________________________________________________________________________________" << endl;
-    cout << "#Particles= " << N << "#Particles part of fluid= " << Nfluid << " #Boxes =" << N_boxes << endl;
-    cout << "System density= " << N/(Lx*Ly*Lz) << " system volume = " << Lx*Ly*Lz << " T_bath= " << T_bath << endl;
+    cout << "#Particles     = " << N << "   #Particles in fluid = " << Nfluid << " #Boxes = " << N_boxes << endl;
+    cout << "System density = " << N/(Lx*Ly*Lz) << "  system volume = " << Lx*Ly*Lz << " T_bath= " << T_bath << endl;
+    cout << "Fluid density  = " << fluid_dens << "   fluid volume = " << fluid_vol << " Fluid takes up = " << fluid_vol/(Lx*Ly*Lz)*100 << "%" << endl;
     cout << "____________________________________________________________________________________________" << endl;
     return 0;
 }

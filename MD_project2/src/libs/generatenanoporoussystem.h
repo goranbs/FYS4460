@@ -20,11 +20,13 @@ public:
 private:
     void cylinder(vector <Atom> &atoms, double &R);
     void spheres(double &R0, double &R1, int &nSpheres);
-    void create_pores(vector <Atom> &atoms, int &nSpheres, int &N);
+    void create_pores(vector <Atom> &atoms, int &nSpheres);
     vector < vector < double > > spherePos;
     vector <double> sphereRad;
     vector <double> L;
     int NumberOfFreeParticles;
+    int counter;
+    int Nparticles;
     double dens;
     double vol;
 
