@@ -8,7 +8,7 @@ using namespace std;
 class Atom{
 
 public:
-    Atom(vector <double> r_, vector <double> v_, vector <double> f_, double u_);
+    Atom(vector <double> &r_, vector <double> &v_, vector <double> &f_, double u_);
     void update_position(const vector <double> &r_);
     void update_velocity(const vector <double> &v_);
     void update_force(const vector <double> &f_);

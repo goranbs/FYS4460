@@ -11,7 +11,7 @@
  */
 
 
-Atom::Atom(vector < double > r_, vector < double > v_, vector < double > f_, double u_){
+Atom::Atom(vector<double> &r_, vector<double> &v_, vector<double> &f_, double u_){
     // construct the Atom object that holds the r, v, f, u, n_crossings and initial position r0.
 
     //dist = vector <double> (3);
@@ -41,9 +41,10 @@ bool Atom::getIs_matrix() const
     return is_matrix;
 }
 
-void Atom::setIs_matrix(bool value)
-{
+void Atom::setIs_matrix(bool value){
+    if (value == true) {
     update_velocity({0,0,0});
+    }
     is_matrix = value;
 }
 

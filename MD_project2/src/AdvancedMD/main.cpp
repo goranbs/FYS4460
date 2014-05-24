@@ -94,10 +94,10 @@ double random_number(){
     // srand (1);
     // srand (time(NULL))
 
-    double U1 = rand()/float(RAND_MAX);    // random number in interval [0,1]
-    double U2 = rand()/float(RAND_MAX);
+    double U1 = rand()/double(RAND_MAX);    // random number in interval [0,1]
+    double U2 = rand()/double(RAND_MAX);
     double val = sqrt(-2*log(U1))*cos(2*pi*U2);
-    return 10*val;
+    return val;
 }
 
 
@@ -173,10 +173,11 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
     Ly = Ny*length;
     Lz = Nz*length;
     cout << "Nx Ny Nz" << endl;
-    cout << Nx << " " << Ny << " " << Nz << endl;
+    //cout << Nx << " " << Ny << " " << Nz << endl;
 
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
+    //cout << "Number of atoms N= " << N << endl;
     //gamma = (3.0/2.0)*N*T_bath/m;
 
     /*****************************************************************************
@@ -240,12 +241,12 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
         quad_sum_z= quad_sum_z + V[i][2]*V[i][2];
     }
 
-    mean_x = sum_v_x/float(N);
-    mean_y = sum_v_y/float(N);
-    mean_z = sum_v_z/float(N);
-    quad_sum_x = quad_sum_x/float(N);
-    quad_sum_y = quad_sum_y/float(N);
-    quad_sum_z = quad_sum_z/float(N);
+    mean_x = sum_v_x/double(N);
+    mean_y = sum_v_y/double(N);
+    mean_z = sum_v_z/double(N);
+    quad_sum_x = quad_sum_x/double(N);
+    quad_sum_y = quad_sum_y/double(N);
+    quad_sum_z = quad_sum_z/double(N);
 
     std_dev_x = sqrt(quad_sum_x - mean_x*mean_x);
     std_dev_y = sqrt(quad_sum_y - mean_y*mean_y);
@@ -474,8 +475,9 @@ void integrator(vector <Atom> atoms,
 
     bool Part_of_matrix = false;
 
-    double dt = 0.02;
-    //int tmax = 1001;                                            // Number of timesteps !!!!!!!!!!!!!!!!!!!!!!!!
+    //double dt = 0.02;
+    double dt = 0.01;
+    //double dt = 0.015;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
@@ -608,7 +610,7 @@ void integrator(vector <Atom> atoms,
         Press = (N*tempi + P_sum/3);               // Pressure
         Pressure.push_back(Press);                 // Pressure
 
-        gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
+        //gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
         //Andersen(tau, dt, T_bath, V, atoms);
 
         cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
@@ -747,7 +749,7 @@ int main(){
     int N, Nfluid;         // #particles in system, #particles in fluid.
     int Nx, Ny, Nz;        // number of origins
     double Lx,Ly,Lz;       // lattice length
-    int kappa = 20;        //
+    int kappa = 25;        //
     double r_cut;          // cutoff lenght
     double density;        // density of system
     double fluid_dens = 0; // density of fluid
@@ -759,12 +761,13 @@ int main(){
 
     // T_bath - Temperature of external heat bath
     double T_bath;
-    T_bath = 0.851;
+    //T_bath = 0.851;
     T_bath = 1.05;
-    int tmax = 2000;  // #timesteps
+    //T_bath = 1.5;
+    int tmax = 300;  // #timesteps
 
-    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state2000.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
+    string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state3000.txt";   // read this state filename
+    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -840,6 +843,7 @@ int main(){
         Nfluid = N;
     }
 
+    cout << "N= " << N << " Nfluid= " << Nfluid << endl;
 
     time2 = clock();
     integrator(atoms,N,Nfluid,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);

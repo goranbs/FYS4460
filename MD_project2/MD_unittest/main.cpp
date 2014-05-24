@@ -9,7 +9,10 @@
 #include <unitconverter.h>
 
 TEST(Atom) {
-    Atom argon({1,2,3},{1,2,3},{0.1,0.1,0.1},0.0);
+    vector<double> r = {1,2,3};
+    vector<double> v = {1,2,3};
+    vector<double> f = {0.1,0.1,0.1};
+    Atom argon(r,v,f,0.0);
     vector <double> i_pos = argon.return_initial_position();
     double truevalue = false;
     if (i_pos[0] == 1){
@@ -164,7 +167,9 @@ TEST(ATOM_Force){
         f1[k] = 0.11;
         f2[k] = 0.12;
     }
-    Atom argon({1,1,1},{2,2,2},f1,0.0);
+    vector<double> r = {1,1,1};
+    vector<double> v = {2,2,2};
+    Atom argon(r,v,f1,0.0);
     argon.update_force(f2);
     f3 = argon.force();
     for (int k = 0; k < 3; ++k) {
