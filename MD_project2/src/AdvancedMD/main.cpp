@@ -178,7 +178,6 @@ void initialize(vector < vector <double> > &V, vector < vector <double> > &R, in
     N_atoms = Nx*Ny*Nz;  // number of origins within a box
     N = 4*N_atoms;       // number of atoms in one box. 4 atoms per origin.
     //cout << "Number of atoms N= " << N << endl;
-    //gamma = (3.0/2.0)*N*T_bath/m;
 
     /*****************************************************************************
      *               Initial positions and velocities                            */
@@ -475,9 +474,7 @@ void integrator(vector <Atom> atoms,
 
     bool Part_of_matrix = false;
 
-    //double dt = 0.02;
-    double dt = 0.01;
-    //double dt = 0.015;
+    double dt = 0.02;
     double Ek, Ep;
     double E_mean_system, E_quad, E_stdev;
     double gamma,tau;
@@ -610,7 +607,7 @@ void integrator(vector <Atom> atoms,
         Press = (N*tempi + P_sum/3);               // Pressure
         Pressure.push_back(Press);                 // Pressure
 
-        //gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
+        gamma = Berendsen(tau,dt,T_bath,Temperature[t]);
         //Andersen(tau, dt, T_bath, V, atoms);
 
         cout << "t= " << t << " E= " << E_system[t] << "  Ekin= " << Ekin[t] << "  U= " << Epot[t] << "  T= " << tempi << " P= " << Press << endl;
@@ -622,6 +619,7 @@ void integrator(vector <Atom> atoms,
     ofile << nbins << endl;
     ofile << N/(Lx*Ly*Lz) << endl;
     ofile << N << endl;
+    ofile << Nfluid << endl;
     ofile << "Temperature of system, Kinetic, Potential Energy and Pressure as a function of time," << endl;
     ofile << "[Temprature,K] [Time,fs] [E_kin,eV] [Epot,eV] [P,N/Å^2]" << endl;
 
@@ -764,10 +762,10 @@ int main(){
     //T_bath = 0.851;
     T_bath = 1.05;
     //T_bath = 1.5;
-    int tmax = 300;  // #timesteps
+    int tmax = 3000;  // #timesteps
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state3000.txt";   // read this state filename
-    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
+    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -813,7 +811,7 @@ int main(){
 
         double R0,R1;
         int nSpheres;
-        nSpheres = 20;
+        nSpheres = 30;
         R0 = 20.0/3.405;
         R1 = 30.0/3.405;
         GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
@@ -950,7 +948,7 @@ void ReadInitialState(string filename, vector <Atom> &atoms,
  */
 double Berendsen(double &tau, double &dt, double &T_bath, double &T){
     /******************************************************************************
-     * Berendsen thermostat lets the system temperature increase to a temprature T_bath from
+     * Berendsen thermostat lets the system temperature increase to a temprature from
      * the system temperature T over a relaxationstime tau.
      * For each timestep, the velocities of the particles in the system is increased by a factor
      *                           vi = gamma*vi_

@@ -123,10 +123,10 @@ void GenerateNanoPorousSystem::create_pores(vector <Atom > &atoms, int &nSpheres
                 Ri = Ri + Rx*Rx;
             }
 
-            Ri = sqrt(Ri);
+//            Ri = sqrt(Ri);
             SphereRad = sphereRad[n];
 
-            if (Ri <= SphereRad) {
+            if (Ri <= SphereRad*SphereRad) {
                 // inside sphere is part of matrix.
                 it->setIs_matrix(true);
                 ++it;
