@@ -811,7 +811,7 @@ int main(){
 
         double R0,R1;
         int nSpheres;
-        nSpheres = 30;
+        nSpheres = 35;
         R0 = 20.0/3.405;
         R1 = 30.0/3.405;
         GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
