@@ -551,13 +551,19 @@ void integrator(vector <Atom> atoms,
 
         update_box_list(atoms,Lcx,Lcy,Lcz,N_cells_x,N_cells_y,N_cells_z,N,box_list);               // Update box-list
         Lennard_Jones(atoms,N,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,box_list,P_sum);        // calculate the force at time (t+dt) using the new positions.
-        write_to_file(atoms,box_list,filename,N,t*dt*Time_0);                                // write to file
+        write_to_file(atoms,box_list,filename,N,t*dt*Time_0);
+        /*
+        if (t%100 == 0){
+            char fname [50];
+            sprintf(fname, "state%06d.txt", t/100);
+            write_to_file(atoms,box_list,fname,N,t*dt*Time_0);   // write to file every 100 timestep!
+        }
 
         binz[t] = bins;
         for (int bin = 0; bin < 16; ++bin) {
             // empty bins.
             bins[bin] = 0;
-        }
+        }*/
 
         vector < vector <double> > mean_disp (N,vector <double> (3,0.0));
 
@@ -760,12 +766,14 @@ int main(){
     // T_bath - Temperature of external heat bath
     double T_bath;
     //T_bath = 0.851;
-    T_bath = 1.05;
+    //T_bath = 1.05;
+    T_bath = 0.5;
     //T_bath = 1.5;
-    int tmax = 3000;  // #timesteps
+    //int tmax = 21000;  // #timesteps
+    int tmax = 3001;
 
     string filename = "../../../build-MD_project2-Desktop_Qt_5_2_0_GCC_64bit-Release/src/AdvancedMD/state3000.txt";   // read this state filename
-    int RunFromFile = 1;                 // use filename as initial state if RunFromFile != 0;
+    int RunFromFile = 0;                 // use filename as initial state if RunFromFile != 0;
 
     Nx = kappa;
     Ny = kappa;
@@ -811,10 +819,13 @@ int main(){
 
         double R0,R1;
         int nSpheres;
-        nSpheres = 35;
+        nSpheres = 15;
         R0 = 20.0/3.405;
-        R1 = 30.0/3.405;
-        GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
+        //R1 = 30.0/3.405;
+        //GenerateNanoPorousSystem porousSys(atoms, R0,R1,Lx,Ly,Lz,nSpheres,N);
+        // Using cylinder:
+        double Rx = 0.9*(Lx/2.0);
+        GenerateNanoPorousSystem porousSys(atoms, R0,Rx,Lx,Ly,Lz,nSpheres,N);
         Nfluid = porousSys.numberOfFreeParticles();
         fluid_vol = porousSys.volume();
         fluid_dens = porousSys.density();
@@ -841,7 +852,9 @@ int main(){
         Nfluid = N;
     }
 
+
     cout << "N= " << N << " Nfluid= " << Nfluid << endl;
+    cout << "Fluid density  = " << fluid_dens << "   fluid volume = " << fluid_vol << " Fluid takes up = " << fluid_vol/(Lx*Ly*Lz)*100 << "%" << endl;
 
     time2 = clock();
     integrator(atoms,N,Nfluid,Lx,Ly,Lz,N_cells_x,N_cells_y,N_cells_z,Lcx,Lcy,Lcz,box_list,T_bath,tmax);

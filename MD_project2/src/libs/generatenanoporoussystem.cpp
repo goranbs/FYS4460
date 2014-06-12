@@ -20,11 +20,11 @@ GenerateNanoPorousSystem::GenerateNanoPorousSystem(vector < Atom > &atoms, doubl
     Nparticles = N;
 
     // create shpere holes:
-    spheres(R0,R1,nSpheres); // create spheres
-    create_pores(atoms,nSpheres);
+    //spheres(R0,R1,nSpheres); // create spheres
+    //create_pores(atoms,nSpheres);
 
     //create cylinder:
-    //cylinder(atoms,R1);  // works fine :-)
+    cylinder(atoms,R1);  // works fine :-)
 }
 
 void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
@@ -40,6 +40,7 @@ void GenerateNanoPorousSystem::cylinder(vector <Atom> &atoms, double &R){
 
     NumberOfFreeParticles = 0;
     vol = (pi*R*R)*L[2];
+    counter = vol*((double)Nparticles)/(L[0]*L[1]*L[2]);
 
     auto it = atoms.begin();
     while (it != atoms.end()) {

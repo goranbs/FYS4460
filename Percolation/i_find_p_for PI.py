@@ -14,7 +14,7 @@ Created on Thu May  1 13:48:45 2014
 from scitools.std import *
 from numpy import interp, zeros, polyfit, polyval
 
-filename = 'PI_lattices.dat'
+filename = 'PI_lattices.dat' # found from the matlab program i_find_pPI.m 
 file = open(filename,'r') # read access
 
 firstline = file.readline()
@@ -125,7 +125,7 @@ fig2 = plt.figure()
 plt.plot(log_L,log_pp,'b-*')
 plt.hold(True)
 plt.plot(log_L,f,'r--')
-plt.title(r'Estimate on $ \nu $ = %.3f $ \pm $ %.4f' % (nu,stdev),fontsize=Fontsize)
+plt.title(r'Estimate on $ \nu $ = %.4f $ \pm $ %.5f' % (nu,stdev),fontsize=Fontsize)
 plt.xlabel(r'$log(L)$', fontsize=Fontsize)
 plt.ylabel(r'$log(p_{\Pi =0.8} - p_{\Pi =0.3})$', fontsize=Fontsize)
 plt.savefig(name2)
