@@ -428,6 +428,7 @@ void calculate_forces(vector <Atom> &atoms,
 
     potential = 4*(r12i -r6i);
 
+    // using N3L:
     atoms[i].add_force(fij);
     atoms[j].subtract_force(fij);
     atoms[i].add_potential(potential);
@@ -633,7 +634,7 @@ void integrator(vector <Atom> atoms,
         // MD units:
         ofile << Temperature[t] << " " << t << " " << Ekin[t] <<  " "  << Epot[t] <<  " " << Pressure[t] << " " << r_msq_t[t] << " " ;
         for (int i = 0; i < nbins; ++i) {
-            ofile << binz[t][i] << " ";
+            ofile << binz[t][i] << " ";  // isn't this empty? What happened here?
         }
         ofile << endl;
         //ofile << Temperature[t]*T_0 << " " << t*dt*Time_0 << " " << Ekin[t]*eps <<  " "  << Epot[t]*eps <<  " " << Pressure[t]*P_0 << " " << r_msq_t[t] << endl;
